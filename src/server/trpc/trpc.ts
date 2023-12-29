@@ -1,16 +1,36 @@
 import { TRPCError, initTRPC } from "@trpc/server"
 import { ExpressContext } from "../server"
+import Cookies from "cookies"
+import clerk from "@clerk/clerk-sdk-node"
 
 const t = initTRPC.context<ExpressContext>().create()
 const middleware = t.middleware
 
 //will later change to protect routes
-const exampleMiddleware = middleware(({ ctx: context, next }) => {
+const authMiddleware = middleware(async ({ ctx, next }) => {
+  const cookies = new Cookies(ctx.req, ctx.res)
+  const sessionToken = cookies.get("__session") as string
+  let user = null
+  try {
+    const decodeInfo = await clerk.verifyToken(sessionToken)
+    const userId = decodeInfo.sub
+    user = await clerk.users.getUser(userId)
+
+    if (!user) {
+      throw new TRPCError({ code: "UNAUTHORIZED" })
+    }
+  } catch (error) {
+    console.log("Error: ", error)
+    throw new TRPCError({code: "INTERNAL_SERVER_ERROR"})
+  }
+
   return next({
-    ctx: {},
+    ctx: {
+      user: user
+    },
   })
 })
 
 export const router = t.router
 export const publicProcedure = t.procedure
-export const privateProcedure = t.procedure.use(exampleMiddleware)
+export const privateProcedure = t.procedure.use(authMiddleware)

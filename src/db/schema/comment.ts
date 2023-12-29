@@ -6,7 +6,6 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core"
-import { user } from "./user"
 import { post } from "./post"
 
 export const comment = pgTable("comment", {
@@ -22,5 +21,5 @@ export const comment = pgTable("comment", {
     { onDelete: "cascade" }
   ),
   postId: uuid("post_id").references(() => post.id, { onDelete: "cascade" }),
-  userId: uuid("user_id").references(() => user.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull(), //clerk userId
 })

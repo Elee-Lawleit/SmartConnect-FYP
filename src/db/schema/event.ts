@@ -6,7 +6,6 @@ import {
   text,
   uuid,
 } from "drizzle-orm/pg-core"
-import { user } from "./user"
 
 export const eventTypeEnum = pgEnum("event_type_enum", ["online", "onsite"])
 
@@ -22,13 +21,13 @@ export const event = pgTable("event", {
   endDate: date("end_date", {
     mode: "string",
   }).notNull(),
-  organizerId: uuid("organizer_id").references(() => user.id),
+  organizerId: text("organizer_id").notNull() //clerk userId,
 })
 
 export const event_users = pgTable(
   "event_users",
   {
-    userId: uuid("user_id").references(() => user.id),
+    userId: text("user_id").notNull(), //clerk userId
     eventId: uuid("event_id").references(() => event.id),
   },
   (table) => {
