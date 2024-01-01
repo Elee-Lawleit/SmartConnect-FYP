@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, integer } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
+import { type InferSelectModel, type InferInsertModel } from "drizzle-orm"
 
 export const post = pgTable("post", {
   id: uuid("id").defaultRandom().primaryKey().notNull(),
@@ -16,3 +17,6 @@ export const post = pgTable("post", {
   views: integer("views").default(0),
   userId: text("user_id").notNull() //clerk userId 
 })
+
+export type selectPost = InferSelectModel<typeof post>
+export type InsertPost = InferInsertModel<typeof post>

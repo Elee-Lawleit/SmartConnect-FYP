@@ -2,53 +2,24 @@
 import { trpc } from "@/server/trpc/client"
 import { UserButton, useUser, useClerk } from "@clerk/nextjs"
 import { useEffect, useState } from "react"
+import { QueryClient } from "@tanstack/react-query"
 
 export default function Home() {
-  const clerk = useClerk()
-  const { user, isSignedIn } = useUser()
 
-  useEffect(() => {
-    async function checkWalletConnection() {
-      if (user && isSignedIn) {
-        // @ts-ignore
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        })
-        const [account] = accounts
+  const utils = trpc.useUtils()
 
-        console.log("address: ", account)
+  //move this useeffect to root layout (can't do that there, so maybe move in the providers file) and add the condition to only add the listener when the user is on pages other than signup/signin
 
-        const clerkWeb3Wallets = user?.web3Wallets
-        const wallets = clerkWeb3Wallets.map((wallet) => wallet.web3Wallet)
-        if (!wallets.includes(account)) {
-          window.alert(
-            "Wallet is not associated with clerk account. It will be disconnected! Please connect a valid wallet address or cancel"
-          )
-          try {
-            // @ts-ignore
-            await window.ethereum.send("wallet_requestPermissions", [
-              { eth_accounts: {} },
-            ])
-          } catch (error: any) {
-            if (error.code == "4001")
-              alert("Wallet disconected. You can connect it anytime!")
-          }
-        }
-      }
-    }
+  const{data: posts, isLoading: loadingPosts} = trpc.postRouter.fetchAllPosts.useQuery()
+  const {data: post, isLoading: loadingPost} = trpc.postRouter.fetchPost.useQuery({postId: "afcb2b11-a30c-469d-80aa-b88bf272019f"})
 
-    checkWalletConnection() //initial check
-
-    // @ts-ignore
-    window.ethereum.on("accountsChanged", checkWalletConnection)
-  }, [user])
-
-  const { mutate: createPost, isLoading } = trpc.postRouter.post.useMutation({
+  const { mutate: createPost, isLoading } = trpc.postRouter.createPost.useMutation({
     onError: (error) => {
       console.log("Bad thing happened: ", error)
     },
     onSuccess: (response) => {
       console.log("Good thing happened. Here it is: ", response)
+      utils.postRouter.fetchAllPosts.invalidate()
     },
   })
   const createDummyPost = () => {
@@ -71,6 +42,7 @@ export default function Home() {
       <button onClick={createDummyPost}>
         {isLoading ? "Creating post..." : "Create a post"}
       </button>
+
     </>
   )
 }
