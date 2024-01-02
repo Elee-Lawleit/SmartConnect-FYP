@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { trpc } from "@/server/trpc/client"
 import { httpBatchLink } from "@trpc/client"
 import { ClerkProvider, useUser } from "@clerk/nextjs"
+import {ApolloProvider, ApolloClient, InMemoryCache} from "@apollo/client"
+
 
 const Providers = ({ children }: PropsWithChildren) => {
   const [queryClient] = useState(() => new QueryClient())
@@ -24,13 +26,20 @@ const Providers = ({ children }: PropsWithChildren) => {
       ],
     })
   )
+  const [apolloClient] = useState(
+    () =>
+      new ApolloClient({
+        cache: new InMemoryCache(),
+        uri: process.env.NEXT_PUBLIC_SUBGRAPH_API_KEY,
+      })
+  )
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <ClerkProvider>
         <WalletEventChange />
         <QueryClientProvider client={queryClient}>
-          {children}
+          <ApolloProvider client={apolloClient}>{children}</ApolloProvider>
         </QueryClientProvider>
       </ClerkProvider>
     </trpc.Provider>

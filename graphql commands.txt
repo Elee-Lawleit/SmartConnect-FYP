@@ -1,0 +1,2 @@
+1. pnpm exec apollo client:download-schema --endpoint <deployed subgraph endpoint> <path to store the schema>
+2. pnpm exec apollo client:codegen <path where to generate> --localSchemaFile <path to local schema file> --target=<language ie ts | swift | json| ...>
