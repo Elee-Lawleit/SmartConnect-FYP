@@ -9,18 +9,31 @@ export default function Home() {
 
   //move this useeffect to root layout (can't do that there, so maybe move in the providers file) and add the condition to only add the listener when the user is on pages other than signup/signin
 
-  // const{data: posts, isLoading: loadingPosts} = trpc.postRouter.fetchAllPosts.useQuery()
-  const {data: post, isLoading: loadingPost} = trpc.postRouter.fetchPost.useQuery({postId: "13a6afdf-565b-4920-9b83-2f92edbf70a8"})
-  console.log("Fetching single post: ", post)
+  const { data: posts, isLoading: loadingPosts,  fetchNextPage} =
+    trpc.postRouter.fetchAllPosts.useInfiniteQuery(
+      { limit: 2 },
+      {
+        getNextPageParam: (lastPageResponse) => lastPageResponse.nextCursor,
+      }
+    )
 
-  const {mutate: createComment, isLoading: creatingComment} = trpc.commentRouter.createComment.useMutation({
-    onError: (error)=>{
-      console.log("Error creating comment: ", error)
-    },
-    onSuccess: (response)=>{
-      console.log("Comment created: ", response)
-    }
-  })
+  console.log("Infinite Posts: ", posts)
+
+  const { data: post, isLoading: loadingPost } =
+    trpc.postRouter.fetchPost.useQuery({
+      postId: "13a6afdf-565b-4920-9b83-2f92edbf70a8",
+    })
+  // console.log("Fetching single post: ", post)
+
+  const { mutate: createComment, isLoading: creatingComment } =
+    trpc.commentRouter.createComment.useMutation({
+      onError: (error) => {
+        // console.log("Error creating comment: ", error)
+      },
+      onSuccess: (response) => {
+        // console.log("Comment created: ", response)
+      },
+    })
 
   const { mutate: createPost, isLoading } =
     trpc.postRouter.createPost.useMutation({
@@ -45,8 +58,7 @@ export default function Home() {
     createPost(data)
   }
 
-
-  const createDummyComment = () =>{
+  const createDummyComment = () => {
     const data = {
       text: "Example comment text",
       postId: "13a6afdf-565b-4920-9b83-2f92edbf70a8",
@@ -65,6 +77,8 @@ export default function Home() {
       <button onClick={createDummyComment}>
         {creatingComment ? "Creating comment on post..." : "Create comment"}
       </button>
+      <br />
+      <button onClick={()=>fetchNextPage()}>Load more posts</button>
     </>
   )
 }

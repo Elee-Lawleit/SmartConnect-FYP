@@ -7,19 +7,41 @@ import { PrismaClient } from "@prisma/client"
 const prisma = new PrismaClient()
 
 export const postRouter = router({
-  fetchAllPosts: publicProcedure.query(async () => {
-    let posts
-    try {
-      const posts = await prisma.post.findMany({
-        
+  fetchAllPosts: publicProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).nullish(),
+        cursor: z.string().uuid().nullish(),
       })
-      
-    } catch (error) {
-      console.log("Error: ", error)
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-    }
-    return { success: true, posts }
-  }),
+    )
+    .query(async ({input, ctx}) => {
+
+      const limit = input.limit ?? 50
+      const {cursor} = input
+
+      let posts
+      try {
+        posts = await prisma.post.findMany({
+          take: limit + 1,
+          cursor: cursor? {id: cursor} : undefined,
+          orderBy: {
+            id: "asc"
+          }
+        })
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
+      let nextCursor: typeof cursor | undefined = undefined
+
+      //it means there still are posts to retrieve
+      if(posts.length > limit){
+        const nextItem = posts.pop()
+        nextCursor = nextItem!.id
+      }
+
+      return { success: true, posts, nextCursor }
+    }),
 
   fetchPost: publicProcedure
     .input(
