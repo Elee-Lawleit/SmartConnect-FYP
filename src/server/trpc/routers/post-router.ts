@@ -14,19 +14,18 @@ export const postRouter = router({
         cursor: z.string().uuid().nullish(),
       })
     )
-    .query(async ({input, ctx}) => {
-
+    .query(async ({ input, ctx }) => {
       const limit = input.limit ?? 50
-      const {cursor} = input
+      const { cursor } = input
 
       let posts
       try {
         posts = await prisma.post.findMany({
           take: limit + 1,
-          cursor: cursor? {id: cursor} : undefined,
+          cursor: cursor ? { id: cursor } : undefined,
           orderBy: {
-            id: "asc"
-          }
+            id: "asc",
+          },
         })
       } catch (error) {
         console.log("🔴 Prisma Error: ", error)
@@ -35,7 +34,7 @@ export const postRouter = router({
       let nextCursor: typeof cursor | undefined = undefined
 
       //it means there still are posts to retrieve
-      if(posts.length > limit){
+      if (posts.length > limit) {
         const nextItem = posts.pop()
         nextCursor = nextItem!.id
       }
@@ -46,7 +45,7 @@ export const postRouter = router({
   fetchPost: publicProcedure
     .input(
       z.object({
-        postId: z.string(),
+        postId: z.string().uuid(),
       })
     )
     .query(async ({ input }) => {
@@ -73,6 +72,10 @@ export const postRouter = router({
       } catch (error) {
         console.log("🔴 Prisma Error: ", error)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
+
+      if (!post) {
+        throw new TRPCError({ code: "NOT_FOUND" })
       }
 
       return { success: true, post }
@@ -106,5 +109,36 @@ export const postRouter = router({
       }
 
       return { success: true, post }
+    }),
+
+  deletePost: privateProcedure
+    .input(
+      z.object({
+        postId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { postId } = input
+
+      if (!ctx.user.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" })
+      }
+
+      try {
+        const batchPayload = await prisma.post.deleteMany({
+          where: {
+            id: postId,
+            userId: ctx.user.id,
+          },
+        })
+        // *****TODO***** not quite bc post id can be wrong as well, just come back to this later dude
+        if (batchPayload.count === 0) {
+          throw new TRPCError({ code: "UNAUTHORIZED" }) //this is to see that only the original poster can delete the post
+        }
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
+      return { success: true }
     }),
 })

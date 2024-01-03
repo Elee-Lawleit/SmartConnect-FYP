@@ -2,6 +2,7 @@
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import AddressAvatar from "./AddressAvatar"
+import Image from "next/image"
 
 type NFTCardProps = {
   imageUrl: string
@@ -16,8 +17,9 @@ const NFTCard = ({ imageUrl, name, price, href }: NFTCardProps) => {
       href={href}
       className="flex flex-col w-64 bg-white border rounded-sm shadow-sm"
     >
-      <div className="h-48">
-        <img
+      <div className="h-48 relative"> {/* position relative to contain the nextjs image fill property */}
+        <Image
+          fill
           className="w-full h-full object-cover object-center rounded-sm"
           src={imageUrl}
           alt="nft card"

@@ -19,11 +19,17 @@ export default function Home() {
 
   console.log("Infinite Posts: ", posts)
 
+  // const { data: post, isLoading: loadingPost } =
+  //   trpc.postRouter.fetchPost.useQuery({
+  //     postId: "13a6afdf-565b-4920-9b83-2f92edbf70a8",
+  //   })
   const { data: post, isLoading: loadingPost } =
     trpc.postRouter.fetchPost.useQuery({
-      postId: "13a6afdf-565b-4920-9b83-2f92edbf70a8",
+      postId: "85f5c05d-5405-4f54-a951-ef254f354252",
+    }, {
+      
     })
-  // console.log("Fetching single post: ", post)
+  console.log("Fetching single post: ", post)
 
   const { mutate: createComment, isLoading: creatingComment } =
     trpc.commentRouter.createComment.useMutation({
