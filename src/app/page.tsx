@@ -7,27 +7,39 @@ import { QueryClient } from "@tanstack/react-query"
 export default function Home() {
   const utils = trpc.useUtils()
 
-  //move this useeffect to root layout (can't do that there, so maybe move in the providers file) and add the condition to only add the listener when the user is on pages other than signup/signin
 
-  const { data: posts, isLoading: loadingPosts,  fetchNextPage} =
-    trpc.postRouter.fetchAllPosts.useInfiniteQuery(
-      { limit: 2 },
-      {
-        getNextPageParam: (lastPageResponse) => lastPageResponse.nextCursor,
-      }
-    )
+  const {
+    data: posts,
+    isLoading: loadingPosts,
+    fetchNextPage,
+  } = trpc.postRouter.fetchAllPosts.useInfiniteQuery(
+    { limit: 2 },
+    {
+      getNextPageParam: (lastPageResponse) => lastPageResponse.nextCursor,
+    }
+  )
 
   console.log("Infinite Posts: ", posts)
 
-  // const { data: post, isLoading: loadingPost } =
-  //   trpc.postRouter.fetchPost.useQuery({
-  //     postId: "13a6afdf-565b-4920-9b83-2f92edbf70a8",
-  //   })
+
+  const {
+    data: comments,
+    isLoading: loadingComments,
+    fetchNextPage: fetchMoreComments,
+    hasNextPage,
+
+  } = trpc.commentRouter.fetchAllComments.useInfiniteQuery(
+    { limit: 2, postId: "87e11d5b-5728-425c-9005-2b17706cc9a7" },
+    {
+      getNextPageParam: (lastPageResponse) => lastPageResponse.nextCursor,
+    }
+  )
+
+  console.log("Comments: ", comments)
+
   const { data: post, isLoading: loadingPost } =
     trpc.postRouter.fetchPost.useQuery({
-      postId: "85f5c05d-5405-4f54-a951-ef254f354252",
-    }, {
-      
+      postId: "87e11d5b-5728-425c-9005-2b17706cc9a7",
     })
   console.log("Fetching single post: ", post)
 
@@ -48,7 +60,7 @@ export default function Home() {
       },
       onSuccess: (response) => {
         console.log("Good thing happened. Here it is: ", response)
-        // utils.postRouter.fetchAllPosts.invalidate()
+        utils.postRouter.fetchAllPosts.invalidate()
       },
     })
   const createDummyPost = () => {
@@ -67,7 +79,7 @@ export default function Home() {
   const createDummyComment = () => {
     const data = {
       text: "Example comment text",
-      postId: "13a6afdf-565b-4920-9b83-2f92edbf70a8",
+      postId: "87e11d5b-5728-425c-9005-2b17706cc9a7",
     }
     createComment(data)
   }
@@ -84,7 +96,8 @@ export default function Home() {
         {creatingComment ? "Creating comment on post..." : "Create comment"}
       </button>
       <br />
-      <button onClick={()=>fetchNextPage()}>Load more posts</button>
+      <button onClick={() => fetchMoreComments()}>Load more comments</button>
+      <button onClick={() => fetchNextPage()}>Load more posts</button>
     </>
   )
 }

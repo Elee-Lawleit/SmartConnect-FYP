@@ -6,6 +6,51 @@ import { PrismaClient } from "@prisma/client"
 const prisma = new PrismaClient()
 
 export const commentRouter = router({
+  fetchAllComments: publicProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).nullish(),
+        cursor: z.string().uuid().nullish(),
+        postId: z.string().uuid(),
+      })
+    )
+    .query(async ({ input }) => {
+      const limit = input.limit ?? 50
+      const { cursor, postId } = input
+
+      let comments
+
+      //the cursor should be unique, whereas the orderBy CAN be a non-unique value
+      //two things can happen here, if the number of likes are same, the order of the comments becomes unpredictable
+      //but in this usecase, it's fine
+      try {
+        comments = await prisma.comment.findMany({
+          skip: !cursor ? 10 : undefined,
+          take: limit + 1,
+          cursor: cursor ? { id: cursor } : undefined,
+          orderBy: {
+            likes: "desc",
+          },
+          where: {
+            postId: postId,
+          },
+        })
+        console.log("Comments: ", comments)
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
+      let nextCursor: typeof cursor | undefined = undefined
+
+      //it means there still are posts to retrieve
+      if (comments.length > limit) {
+        const nextItem = comments.pop()
+        nextCursor = nextItem!.id
+      }
+
+      return { success: true, comments, nextCursor }
+    }),
+
   createComment: privateProcedure
     .input(
       z.object({
@@ -16,10 +61,6 @@ export const commentRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { text, postId, parentCommentId } = input
-
-      if (!ctx.user.id) {
-        throw new TRPCError({ code: "UNAUTHORIZED" })
-      }
 
       if (!text || !postId) {
         throw new TRPCError({ code: "BAD_REQUEST" })
@@ -52,7 +93,7 @@ export const commentRouter = router({
         commentId: z.string().uuid(),
       })
     )
-    .query(async({input}) => {
+    .query(async ({ input }) => {
       const { commentId } = input
 
       if (!commentId) throw new TRPCError({ code: "BAD_REQUEST" })
@@ -86,19 +127,6 @@ export const commentRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { text, commentId } = input
 
-      if (!ctx.user.id) {
-        throw new TRPCError({ code: "UNAUTHORIZED" })
-      }
-
-      const comment = await prisma.comment.findFirst({
-        where: {
-          id: commentId,
-        },
-      })
-      if (ctx.user.id !== commentId) {
-        throw new TRPCError({ code: "UNAUTHORIZED" })
-      }
-
       try {
         await prisma.comment.update({
           data: {
@@ -123,10 +151,6 @@ export const commentRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { commentId } = input
-
-      if (!ctx.user.id) {
-        throw new TRPCError({ code: "UNAUTHORIZED" })
-      }
 
       try {
         // *****TODO***** man, I really don't have to, there are already so many checks to see it the user is correct but whatever, will change this if I feel like it

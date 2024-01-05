@@ -53,8 +53,6 @@ const WalletEventChange = () => {
 
   useEffect(() => {
     async function checkWalletConnection() {
-      console.log("user: ", user)
-      console.log("signed in: ", isSignedIn)
 
       if (user && isSignedIn) {
         // @ts-ignore

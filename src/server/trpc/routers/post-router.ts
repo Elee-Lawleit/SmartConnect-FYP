@@ -24,7 +24,15 @@ export const postRouter = router({
           take: limit + 1,
           cursor: cursor ? { id: cursor } : undefined,
           orderBy: {
-            id: "asc",
+            createdAt: "desc", //orderBy timestamps (which will be unique (very rare case where they won't be))
+          },
+          include: {
+            comments: {
+              take: 10,
+              orderBy: {
+                likes: "desc",
+              },
+            },
           },
         })
       } catch (error) {
@@ -60,11 +68,10 @@ export const postRouter = router({
             id: postId,
           },
           include: {
-            // *****TODO***** change this comment logic to include most liked comments instead
             comments: {
               take: 10,
               orderBy: {
-                createdAt: "desc",
+                likes: "desc",
               },
             },
           },
@@ -87,10 +94,6 @@ export const postRouter = router({
       const { caption, mediaUrls } = input
       const userId = ctx.user.id
 
-      //this will be true anyway, but why not check it again
-      if (!ctx.user.id) {
-        throw new TRPCError({ code: "UNAUTHORIZED" })
-      }
       if (!caption && mediaUrls?.length == 0) {
         throw new TRPCError({ code: "BAD_REQUEST" })
       }
@@ -119,10 +122,6 @@ export const postRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { postId } = input
-
-      if (!ctx.user.id) {
-        throw new TRPCError({ code: "UNAUTHORIZED" })
-      }
 
       try {
         const batchPayload = await prisma.post.deleteMany({
