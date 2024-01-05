@@ -23,15 +23,25 @@ export const postRouter = router({
         posts = await prisma.post.findMany({
           take: limit + 1,
           cursor: cursor ? { id: cursor } : undefined,
-          orderBy: {
-            createdAt: "desc", //orderBy timestamps (which will be unique (very rare case where they won't be))
-          },
+          orderBy: [
+            {
+              likes: "desc",
+            },
+            {
+              createdAt: "desc",
+            },
+          ],
           include: {
             comments: {
               take: 10,
-              orderBy: {
-                likes: "desc",
-              },
+              orderBy: [
+                {
+                  likes: "desc",
+                },
+                {
+                  createdAt: "desc",
+                },
+              ],
             },
           },
         })

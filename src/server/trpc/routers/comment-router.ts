@@ -26,12 +26,17 @@ export const commentRouter = router({
       try {
         console.log("Cursor Value: ", cursor)
         comments = await prisma.comment.findMany({
-          skip: !cursor ? 10 : undefined,
+          // skip: !cursor ? 10 : undefined,
           take: limit + 1,
           cursor: cursor ? { id: cursor } : undefined,
-          orderBy: {
-            createdAt: "desc",
-          },
+          orderBy: [
+            {
+              likes: "desc",
+            },
+            {
+              createdAt: "desc",
+            },
+          ],
           where: {
             postId: postId,
           },
