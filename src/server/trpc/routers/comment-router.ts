@@ -22,27 +22,27 @@ export const commentRouter = router({
 
       //the cursor should be unique, whereas the orderBy CAN be a non-unique value
       //two things can happen here, if the number of likes are same, the order of the comments becomes unpredictable
-      //but in this usecase, it's fine
+      //guess what, it wasn't, ordering by timestamp now
       try {
+        console.log("Cursor Value: ", cursor)
         comments = await prisma.comment.findMany({
           skip: !cursor ? 10 : undefined,
           take: limit + 1,
           cursor: cursor ? { id: cursor } : undefined,
           orderBy: {
-            likes: "desc",
+            createdAt: "desc",
           },
           where: {
             postId: postId,
           },
         })
-        console.log("Comments: ", comments)
       } catch (error) {
         console.log("🔴 Prisma Error: ", error)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
       }
       let nextCursor: typeof cursor | undefined = undefined
 
-      //it means there still are posts to retrieve
+      // it means there still are posts to retrieve
       if (comments.length > limit) {
         const nextItem = comments.pop()
         nextCursor = nextItem!.id
