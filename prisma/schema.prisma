@@ -20,9 +20,25 @@ model Post {
   userId    String   @map("user_id")
 
   comments Comment[]
+  // media    Media[]?
 
   @@map("post")
 }
+
+// *****TODO: ATTACH USER TO MEDIA AND POST*****
+// well if I do this, I don't technically need the "mediaUrls" in my post table, will keep that in mind
+// model Media {
+//   id        String   @id @default(uuid())
+//   type      String   @db.VarChar(20)
+//   url       String
+//   userId    String   @map("user_id") //clerk userId
+//   postId    String?  @db.Uuid
+//   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+//   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+//   @@map("media")
+// }
 
 model Comment {
   id        String   @id @default(uuid()) @db.Uuid

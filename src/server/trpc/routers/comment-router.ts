@@ -18,15 +18,16 @@ export const commentRouter = router({
       const limit = input.limit ?? 50
       const { cursor, postId } = input
 
+      if (!postId) {
+        throw new TRPCError({ code: "BAD_REQUEST" })
+      }
+
       let comments
 
-      //the cursor should be unique, whereas the orderBy CAN be a non-unique value
-      //two things can happen here, if the number of likes are same, the order of the comments becomes unpredictable
-      //guess what, it wasn't, ordering by timestamp now
       try {
         console.log("Cursor Value: ", cursor)
         comments = await prisma.comment.findMany({
-          // skip: !cursor ? 10 : undefined,
+          skip: !cursor ? 10 : undefined,
           take: limit + 1,
           cursor: cursor ? { id: cursor } : undefined,
           orderBy: [
@@ -80,9 +81,6 @@ export const commentRouter = router({
             postId: postId,
             parentId: parentCommentId ?? null,
           },
-          include: {
-            post: true, //include the post data for now, will remove this later for sure 'cause not needed
-          },
         })
       } catch (error) {
         console.log("🔴 Prisma Error: ", error)
@@ -91,7 +89,6 @@ export const commentRouter = router({
       return { success: true, comment }
     }),
 
-  // I don't think we need a single comment but I'll make it just in case
   fetchComment: publicProcedure
     .input(
       z.object({
@@ -132,6 +129,10 @@ export const commentRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { text, commentId } = input
 
+      if (!commentId) {
+        throw new TRPCError({ code: "BAD_REQUEST" })
+      }
+
       try {
         await prisma.comment.update({
           data: {
@@ -157,12 +158,75 @@ export const commentRouter = router({
     .mutation(async ({ input, ctx }) => {
       const { commentId } = input
 
+      if (!commentId) {
+        throw new TRPCError({ code: "BAD_REQUEST" })
+      }
+
       try {
-        // *****TODO***** man, I really don't have to, there are already so many checks to see it the user is correct but whatever, will change this if I feel like it
         await prisma.comment.delete({
           where: {
             id: commentId,
             userId: ctx.user.id,
+          },
+        })
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
+      return { success: true }
+    }),
+  likeComment: privateProcedure
+    .input(
+      z.object({
+        commentId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { commentId } = input
+
+      if (!commentId) {
+        throw new TRPCError({ code: "BAD_REQUEST" })
+      }
+
+      try {
+        await prisma.comment.update({
+          data: {
+            likes: {
+              increment: 1,
+            },
+          },
+          where: {
+            id: commentId,
+          },
+        })
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
+      return { success: true }
+    }),
+  unlikeComment: privateProcedure
+    .input(
+      z.object({
+        commentId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { commentId } = input
+
+      if (!commentId) {
+        throw new TRPCError({ code: "BAD_REQUEST" })
+      }
+
+      try {
+        await prisma.comment.update({
+          data: {
+            likes: {
+              decrement: 1,
+            },
+          },
+          where: {
+            id: commentId,
           },
         })
       } catch (error) {

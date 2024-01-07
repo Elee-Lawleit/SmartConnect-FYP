@@ -3,6 +3,8 @@ import { privateProcedure, publicProcedure, router } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import * as z from "zod"
 import { PrismaClient } from "@prisma/client"
+import clerk, { User } from "@clerk/clerk-sdk-node"
+import { ExtendedPost } from "../../../../prisma/typings/ExtendedPost"
 
 const prisma = new PrismaClient()
 
@@ -18,9 +20,10 @@ export const postRouter = router({
       const limit = input.limit ?? 50
       const { cursor } = input
 
-      let posts
+      let posts: ExtendedPost[] = []
+      let rawPosts
       try {
-        posts = await prisma.post.findMany({
+        rawPosts = await prisma.post.findMany({
           take: limit + 1,
           cursor: cursor ? { id: cursor } : undefined,
           orderBy: [
@@ -45,6 +48,29 @@ export const postRouter = router({
             },
           },
         })
+
+        // Fetch users for each post concurrently
+        const userIds = rawPosts.map((post) => post.userId)
+        const users = await Promise.allSettled(
+          userIds.map((userId) => clerk.users.getUser(userId))
+        )
+
+        function isFulfilledUser(
+          result: PromiseSettledResult<User>
+        ): result is PromiseFulfilledResult<User> {
+          return result.status === "fulfilled"
+        }
+
+        posts = rawPosts.map((post, index) => {
+          const userResult = users[index]
+          const isFulfilled = isFulfilledUser(userResult)
+
+          return {
+            ...post,
+            user: isFulfilled ? userResult.value : null,
+            // media: post.media?.map((mediaId) => media[mediaId]) // If using a separate Media table
+          }
+        })
       } catch (error) {
         console.log("🔴 Prisma Error: ", error)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
@@ -52,8 +78,8 @@ export const postRouter = router({
       let nextCursor: typeof cursor | undefined = undefined
 
       //it means there still are posts to retrieve
-      if (posts.length > limit) {
-        const nextItem = posts.pop()
+      if (rawPosts.length > limit) {
+        const nextItem = rawPosts.pop()
         nextCursor = nextItem!.id
       }
 
@@ -71,21 +97,30 @@ export const postRouter = router({
 
       if (!postId) throw new TRPCError({ code: "BAD_REQUEST" })
 
-      let post
+      let post: ExtendedPost, user
       try {
-        post = await prisma.post.findFirst({
+        post = (await prisma.post.findFirst({
           where: {
             id: postId,
           },
           include: {
             comments: {
               take: 10,
-              orderBy: {
-                likes: "desc",
-              },
+              orderBy: [
+                {
+                  likes: "desc",
+                },
+                {
+                  createdAt: "desc",
+                },
+              ],
             },
           },
-        })
+        })) as ExtendedPost
+        user = await clerk.users.getUser(post?.userId!)
+        if (post) {
+          post.user = user //->attaching the user here
+        }
       } catch (error) {
         console.log("🔴 Prisma Error: ", error)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
@@ -133,6 +168,10 @@ export const postRouter = router({
     .mutation(async ({ input, ctx }) => {
       const { postId } = input
 
+      if (!postId) {
+        throw new TRPCError({ code: "BAD_REQUEST" })
+      }
+
       try {
         const batchPayload = await prisma.post.deleteMany({
           where: {
@@ -140,10 +179,68 @@ export const postRouter = router({
             userId: ctx.user.id,
           },
         })
-        // *****TODO***** not quite bc post id can be wrong as well, just come back to this later dude
-        if (batchPayload.count === 0) {
-          throw new TRPCError({ code: "UNAUTHORIZED" }) //this is to see that only the original poster can delete the post
-        }
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
+      return { success: true }
+    }),
+
+  likePost: privateProcedure
+    .input(
+      z.object({
+        postId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { postId } = input
+
+      if (!postId) {
+        throw new TRPCError({ code: "BAD_REQUEST" })
+      }
+
+      try {
+        //maybe make this more secure later by checking if the user has already liked the post
+        await prisma.post.update({
+          data: {
+            likes: {
+              increment: 1,
+            },
+          },
+          where: {
+            id: postId,
+          },
+        })
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
+      return { success: true }
+    }),
+  unlikePost: privateProcedure
+    .input(
+      z.object({
+        postId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { postId } = input
+
+      if (!postId) {
+        throw new TRPCError({ code: "BAD_REQUEST" })
+      }
+
+      try {
+        await prisma.post.update({
+          data: {
+            likes: {
+              decrement: 1,
+            },
+          },
+          where: {
+            id: postId,
+          },
+        })
       } catch (error) {
         console.log("🔴 Prisma Error: ", error)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })

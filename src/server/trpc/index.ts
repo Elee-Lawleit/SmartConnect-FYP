@@ -1,12 +1,11 @@
 import { commentRouter } from "./routers/comment-router"
 import { postRouter } from "./routers/post-router"
-import { publicProcedure, router } from "./trpc"
+import { router } from "./trpc"
 
 //pass sub routes into this main router
 export const appRouter = router({
-  testAPI: publicProcedure.query(() => 5),
   postRouter: postRouter,
-  commentRouter: commentRouter
+  commentRouter: commentRouter,
 })
 
 //to get typesafety on front end
