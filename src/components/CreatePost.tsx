@@ -3,7 +3,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { ImagePlus, Loader2, Trash2 } from "lucide-react"
 import Image from "next/image"
-import { ChangeEvent, useEffect, useState } from "react"
+import { ChangeEvent, useState } from "react"
 import { Button } from "@/components/ui/button"
 import getSignedUrls from "../app/actions/getSignedUrls"
 import { useUser } from "@clerk/nextjs"
@@ -97,7 +97,7 @@ const CreatePost = () => {
   }
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-md mb-3 w-[512px]">
+    <div className="bg-white p-8 rounded-lg shadow-md mb-3 w-full max-w-lg mx-auto">
       <div className="w-full">
         <Textarea
           className="resize-none"
@@ -120,7 +120,7 @@ const CreatePost = () => {
                           src={url}
                           alt="post"
                           className="relative aspect-square object-cover rounded-md shadow-md"
-                          onLoad={()=>URL.revokeObjectURL(url)}
+                          onLoad={() => URL.revokeObjectURL(url)}
                         />
                       ) : (
                         <video
@@ -170,6 +170,7 @@ const CreatePost = () => {
               multiple
               accept="image/*,video/mp4,video/webm"
               onChange={handleImageUploads}
+              value=""
             />
           </label>
           <Button

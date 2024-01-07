@@ -15,14 +15,38 @@ model Post {
   caption   String?
   mediaUrls String[] @map("media_urls")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  likes     Int      @default(0)
-  views     Int      @default(0)
+  likes     Int      @default(0) //still keeping this here for easy quering
+  views     Int      @default(0) // will use this when I implement the intersection observer API
   userId    String   @map("user_id")
 
   comments Comment[]
   // media    Media[]?
+  postLikes PostLikes[]
+  postViews PostViews[]
 
   @@map("post")
+}
+
+model PostLikes{
+  postId String @db.Uuid @map("post_id")
+  userId String @map("user_id")
+
+  @@id([postId, userId])
+
+  post Post @relation(fields: [postId], references: [id])
+
+  @@map("post_likes") 
+}
+
+model PostViews{
+  postId String @db.Uuid @map("post_id")
+  userId String @map("user_id")
+
+  @@id([postId, userId])
+
+  post Post @relation(fields: [postId], references: [id])
+
+  @@map("post_views") 
 }
 
 // *****TODO: ATTACH USER TO MEDIA AND POST*****
@@ -57,7 +81,20 @@ model Comment {
 
   replies Comment[] @relation("ParentChild")
 
+  commentLikes CommentLikes[]
+
   @@map("comment")
+}
+
+model CommentLikes{
+  commentId String @db.Uuid @map("comment_id")
+  userId String @map("user_id")
+
+  @@id([commentId, userId])
+
+  post Comment @relation(fields: [commentId], references: [id])
+
+  @@map("comment_likes") 
 }
 
 model Event {

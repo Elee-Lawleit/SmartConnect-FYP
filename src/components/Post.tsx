@@ -1,6 +1,7 @@
 "use client"
-import { formatRelativeTime } from '@/lib/utils'
-import React from 'react'
+import { formatRelativeTime } from "@/lib/utils"
+import { Heart } from "lucide-react"
+import React from "react"
 
 interface PostProps {
   userImageUrl: string
@@ -9,27 +10,32 @@ interface PostProps {
   caption: string
   mediaUrls: string[]
   likes: number
-
+  hasUserLiked: Boolean
 }
 
-const Post = ({userImageUrl, caption, createdAt, likes, mediaUrls, userDisplayName}: PostProps) => {
+const Post = ({
+  userImageUrl,
+  caption,
+  createdAt,
+  likes,
+  mediaUrls,
+  userDisplayName,
+  hasUserLiked,
+}: PostProps) => {
   return (
     <div className="bg-gray-100 flex items-center mx-auto">
       <div className="bg-white p-8 rounded-lg shadow-md max-w-lg">
         {/* <!-- User Info with Three-Dot Menu --> */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-            
-              <img
-                src={userImageUrl}
-                alt="User Avatar"
-                className="w-8 h-8 rounded-full"
-              />
-            
+            <img
+              src={userImageUrl}
+              alt="User Avatar"
+              className="w-8 h-8 rounded-full"
+            />
+
             <div>
-              <p className="text-gray-800 font-semibold">
-                {userDisplayName}
-              </p>
+              <p className="text-gray-800 font-semibold">{userDisplayName}</p>
               <p className="text-gray-500 text-sm">
                 {formatRelativeTime(createdAt)}
               </p>
@@ -81,14 +87,13 @@ const Post = ({userImageUrl, caption, createdAt, likes, mediaUrls, userDisplayNa
         <div className="flex items-center justify-between text-gray-500">
           <div className="flex items-center space-x-2">
             <button className="flex justify-center items-center gap-2 px-2 hover:bg-gray-50 rounded-full p-1">
-              <svg
-                className="w-5 h-5 fill-current"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 21.35l-1.45-1.32C6.11 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-4.11 6.86-8.55 11.54L12 21.35z" />
-              </svg>
-              <span>{likes}</span>
+              <Heart
+                className="h-6 w-6"
+                fill={hasUserLiked ? "#DC143C" : "none"}
+                strokeWidth={hasUserLiked ? "0" : "1"}
+              />
+
+              <span className="text-lg">{likes}</span>
             </button>
           </div>
           <button className="flex justify-center items-center gap-2 px-2 hover:bg-gray-50 rounded-full p-1">

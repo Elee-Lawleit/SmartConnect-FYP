@@ -46,6 +46,7 @@ export const postRouter = router({
                 },
               ],
             },
+            postLikes: true
           },
         })
 
@@ -81,6 +82,8 @@ export const postRouter = router({
       if (rawPosts.length > limit) {
         const nextItem = rawPosts.pop()
         nextCursor = nextItem!.id
+
+        posts.pop()
       }
 
       return { success: true, posts, nextCursor }
@@ -115,6 +118,7 @@ export const postRouter = router({
                 },
               ],
             },
+            postLikes : true
           },
         })) as ExtendedPost
         user = await clerk.users.getUser(post?.userId!)

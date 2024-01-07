@@ -6,8 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { trpc } from "@/server/trpc/client"
 import { httpBatchLink } from "@trpc/client"
 import { ClerkProvider, useUser } from "@clerk/nextjs"
-import {ApolloProvider, ApolloClient, InMemoryCache} from "@apollo/client"
-
+import { ApolloProvider, ApolloClient, InMemoryCache } from "@apollo/client"
 
 const Providers = ({ children }: PropsWithChildren) => {
   const [queryClient] = useState(() => new QueryClient())
@@ -53,8 +52,8 @@ const WalletEventChange = () => {
 
   useEffect(() => {
     async function checkWalletConnection() {
-
-      if (user && isSignedIn) {
+      // @ts-ignore
+      if (window.ethereum && user && isSignedIn) {
         // @ts-ignore
         const accounts = await window.ethereum.request({
           method: "eth_requestAccounts",
@@ -83,12 +82,18 @@ const WalletEventChange = () => {
     checkWalletConnection() //initial check
 
     // @ts-ignore
-    window.ethereum.on("accountsChanged", checkWalletConnection)
-
-    //remove listener on unmount
-    return () =>
+    if (window.ethereum) {
       // @ts-ignore
-      window.ethereum.removeListener("accountsChanged", checkWalletConnection)
+      window.ethereum.on("accountsChanged", checkWalletConnection)
+    }
+    //remove listener on unmount
+    return () => {
+      // @ts-ignore
+      if (window.ethereum) {
+        // @ts-ignore
+        window.ethereum.removeListener("accountsChanged", checkWalletConnection)
+      }
+    }
   }, [user])
 
   return <></>
