@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server"
 import * as z from "zod"
 import { PrismaClient } from "@prisma/client"
 import clerk, { User } from "@clerk/clerk-sdk-node"
-import { ExtendedPost } from "../../../../prisma/typings/ExtendedPost"
+import { ExtendedPost, ExtendedPosts } from "../../../../prisma/typings/ExtendedPost"
 
 const prisma = new PrismaClient()
 
@@ -20,7 +20,7 @@ export const postRouter = router({
       const limit = input.limit ?? 50
       const { cursor } = input
 
-      let posts: ExtendedPost[] = []
+      let posts: ExtendedPosts[] = []
       let rawPosts
       try {
         rawPosts = await prisma.post.findMany({
@@ -28,10 +28,10 @@ export const postRouter = router({
           cursor: cursor ? { id: cursor } : undefined,
           orderBy: [
             {
-              likes: "desc",
+              createdAt: "desc",
             },
             {
-              createdAt: "desc",
+              likes: "desc",
             },
           ],
           include: {

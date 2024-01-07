@@ -6,15 +6,26 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
 const getSignedUrls = async(fileTypes: string[], fileSizes: number[], fileChecksums: string[], userId: string)=>{
-  const acceptedFileTypes = ["image/*", "video/mp4", "video/webm"]
+  const acceptedFileTypes = ["image/*", "video/*"]
   const maxFileSize = 1024 * 1024 * 50 //50 MB
+
+  const isAcceptedFileType = (fileType: string) => {
+    return acceptedFileTypes.some((acceptedType) => {
+      if (acceptedType.endsWith("/*")) {
+        // Check general category (e.g., 'image/*')
+        const typeCategory = acceptedType.split("/")[0]
+        return fileType.startsWith(`${typeCategory}/`)
+      }
+      return fileType === acceptedType // Check specific type
+    })
+  }
 
   //check for invalid file type and size here
   fileTypes.forEach((fileType, index) => {
     const fileSize = fileSizes[index]
 
     // Check for invalid file type
-    if (!acceptedFileTypes.includes(fileType)) {
+    if (!isAcceptedFileType(fileType)) {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: `Unsupported file type: ${fileType}.`,
