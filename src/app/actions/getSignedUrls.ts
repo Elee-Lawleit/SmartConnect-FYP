@@ -5,7 +5,12 @@ import * as Crpyto from "crypto"
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
-const getSignedUrls = async(fileTypes: string[], fileSizes: number[], fileChecksums: string[], userId: string)=>{
+const getSignedUrls = async (
+  fileTypes: string[],
+  fileSizes: number[],
+  fileChecksums: string[],
+  userId: string
+) => {
   const acceptedFileTypes = ["image/*", "video/*"]
   const maxFileSize = 1024 * 1024 * 50 //50 MB
 
@@ -26,18 +31,23 @@ const getSignedUrls = async(fileTypes: string[], fileSizes: number[], fileChecks
 
     // Check for invalid file type
     if (!isAcceptedFileType(fileType)) {
-      throw new TRPCError({
+      return {
+        success: false,
         code: "BAD_REQUEST",
+        fileType,
         message: `Unsupported file type: ${fileType}.`,
-      })
+      }
     }
 
     // Check for file size exceeding the limit
     if (fileSize > maxFileSize) {
-      throw new TRPCError({
+      return {
+        success: false,
         code: "BAD_REQUEST",
-        message: `File size exceeds the maximum limit of 50MB.`,
-      })
+        fileSize,
+        index,
+        message: `File size at ${index} exceeds the maximum limit of 50MB.`,
+      }
     }
   })
 
@@ -66,11 +76,19 @@ const getSignedUrls = async(fileTypes: string[], fileSizes: number[], fileChecks
       },
     })
 
-    const signedUrl = await getSignedUrl(s3, putObjectCommand, {
-      expiresIn: 1600, //30 minutes
-    })
+    try {
+      const signedUrl = await getSignedUrl(s3, putObjectCommand, {
+        expiresIn: 1600, //30 minutes
+      })
 
-    signedUrls.push(signedUrl)
+      signedUrls.push(signedUrl)
+    } catch (error) {
+      return {
+        success: false,
+        code: "INTERNAL_SERVER_ERROR",
+        message: `An internal server error occured. Please try again later.`,
+      }
+    }
 
     //Attach media to user later
     // const mediaResult = await prisma.media.create({

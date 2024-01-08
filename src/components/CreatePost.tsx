@@ -42,7 +42,6 @@ const CreatePost = () => {
     if (event.target.files) {
       const fileArray = Array.from(event.target.files)
 
-
       if (fileArray.length > 0) {
         setSelectedFiles((prev) => [...prev, ...fileArray])
         setFileType((prev) => [...prev, ...fileArray.map((file) => file.type)])
@@ -56,8 +55,6 @@ const CreatePost = () => {
     }
   }
 
-  
-
   const uploadPost = async (e: any) => {
     setLoading(true)
     e.preventDefault()
@@ -66,28 +63,59 @@ const CreatePost = () => {
       setLoading(false)
       return
     }
-    const response = await getSignedUrls(
-      fileTypes,
-      fileSizes,
-      fileChecksums,
-      user?.user!.id
-    )
+    let response: any //will deal with the type later
+    try {
+      response = await getSignedUrls(
+        fileTypes,
+        fileSizes,
+        fileChecksums,
+        user?.user!.id
+      )
+      if (!response.success) {
+        if (response.code === "BAD_REQUEST" && response.fileType) {
+          // show toast for unsupported file type
+        }
+        if (response.code === "BAD_REQUEST" && response.fileSize) {
+          // file at index + 1 exceeds the size of 50MB
+        } else {
+          // show toast for internal server error
+        }
+      }
+    } catch (error) {
+      //show toast for internal server error
+    }
     setLoading(false)
-    console.log("Response: ", response)
-    let mediaUrls: string[] = []
-    response.signedUrls.forEach(async (url, index) => {
-      mediaUrls.push(url.split("?")[0])
-      await fetch(url, {
-        method: "PUT",
-        headers: {
-          "Content-Type": selectedFiles[index].type,
-        },
-        body: selectedFiles[index],
-      })
-    })
-    console.log("Media urls: ", mediaUrls)
 
-    mutate({ caption, mediaUrls })
+    let mediaUrls: string[] = []
+
+    await Promise.allSettled(
+      response.signedUrls.forEach(async (url: string, index: number) => {
+        mediaUrls.push(url.split("?")[0])
+        try {
+          const response = await fetch(url, {
+            method: "PUT",
+            headers: {
+              "Content-Type": selectedFiles[index].type,
+            },
+            body: selectedFiles[index],
+          })
+          //handle non okay responses
+          if (!response.ok) {
+            //show toast that upload to s3 failed
+            //don't worry about the which file, just fail all, but I will then need to delete from s3 as well
+            //use the mediaUrls array here to map and delete files, if you don't want ghost files in bucket
+            //because the mediaUrls array contains ALL urls, use the index to figure out which url is not needed
+            //map over the rest and delete from s3
+            return
+          }
+
+          //finally insert in database
+          mutate({ caption, mediaUrls })
+        } catch (error) {
+          //handle fetch errors here, maybe I am over doing it at this point
+        }
+      })
+    )
 
     setSelectedFiles([])
     setFileType([])
