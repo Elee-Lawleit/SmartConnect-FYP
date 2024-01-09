@@ -1,16 +1,24 @@
 "use client"
 import { formatRelativeTime } from "@/lib/utils"
 import { Heart } from "lucide-react"
-import React from "react"
+import React, { useEffect } from "react"
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "@/components/ui/carousel"
 
 interface PostProps {
   userImageUrl: string
   userDisplayName: string | undefined
   createdAt: string
   caption: string
-  mediaUrls: string[]
   likes: number
   hasUserLiked: Boolean
+  media?: any
 }
 
 const Post = ({
@@ -18,10 +26,35 @@ const Post = ({
   caption,
   createdAt,
   likes,
-  mediaUrls,
   userDisplayName,
   hasUserLiked,
+  media,
 }: PostProps) => {
+  console.log("media: ", media)
+  const [api, setApi] = React.useState<CarouselApi>()
+
+  useEffect(() => {
+    if (!api) {
+      return
+    }
+
+    const setCarouselHeight = () => {
+      const currentSlide = api.selectedScrollSnap()
+      const slideList: HTMLElement[] = api.slideNodes()
+
+      const slide: ChildNode | null = slideList[currentSlide].firstChild
+
+      const rootCarouselDiv: HTMLElement = api.containerNode()
+      if (slide) {
+        const height = (slide as HTMLElement).offsetHeight
+        rootCarouselDiv.style.height = `${height}px`
+      }
+    }
+    setCarouselHeight() //set initial height
+    api.on("select", setCarouselHeight)
+    return api.off("select", setCarouselHeight) //remove listener
+  }, [api])
+
   return (
     <div className="bg-gray-100 flex items-center mx-auto">
       <div className="bg-white p-8 rounded-lg shadow-md max-w-lg">
@@ -74,15 +107,37 @@ const Post = ({
             </a> */}
           </p>
         </div>
-        {/* <!-- Image --> */}
-        <div className="mb-4">
-          {/* TODO: Add shadcn carousel here and map the media */}
-          <img
-            src={mediaUrls[0]}
-            alt="Post Image"
-            className="w-full rounded-md"
-          />
-        </div>
+        {media.length !== 0 && (
+          <div className="mb-4">
+            <Carousel setApi={setApi} orientation="horizontal">
+              <CarouselContent>
+                {" "}
+                {/* this should adjust height based on CaroselItem */}
+                {media.map((media: any, index: number) => {
+                  return (
+                    <CarouselItem key={index}>
+                      {media.type === "image" ? (
+                        <img
+                          src={media.url}
+                          alt="post image"
+                          className="w-full rounded-md align-middle"
+                        />
+                      ) : (
+                        <video
+                          src={media.url}
+                          controls
+                          className="w-full rounded-md align-middle"
+                        />
+                      )}
+                    </CarouselItem>
+                  )
+                })}
+              </CarouselContent>
+              <CarouselPrevious className="ml-14" />
+              <CarouselNext className="mr-14" />
+            </Carousel>
+          </div>
+        )}
         {/* <!-- Like and Comment Section --> */}
         <div className="flex items-center justify-between text-gray-500">
           <div className="flex items-center space-x-2">
