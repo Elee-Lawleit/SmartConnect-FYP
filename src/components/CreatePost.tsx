@@ -123,7 +123,7 @@ const CreatePost = () => {
 
     //finally insert in database
     mutate(
-      { caption, mediaUrls },
+      { caption, mediaUrls, fileTypes },
       {
         onSuccess: () => {
           toast({

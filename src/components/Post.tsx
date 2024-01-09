@@ -66,12 +66,12 @@ const Post = ({
         <div className="mb-4">
           <p className="text-gray-800">
             {caption + " "}
-            <a href="" className="text-blue-600">
+            {/* <a href="" className="text-blue-600">
               #CuteKitten
             </a>
             <a href="" className="text-blue-600">
               #AdventureCat
-            </a>
+            </a> */}
           </p>
         </div>
         {/* <!-- Image --> */}
@@ -80,7 +80,7 @@ const Post = ({
           <img
             src={mediaUrls[0]}
             alt="Post Image"
-            className="w-full h-48 object-cover rounded-md"
+            className="w-full rounded-md"
           />
         </div>
         {/* <!-- Like and Comment Section --> */}

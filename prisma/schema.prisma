@@ -13,40 +13,37 @@ datasource db {
 model Post {
   id        String   @id @default(uuid()) @db.Uuid
   caption   String?
-  mediaUrls String[] @map("media_urls")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   likes     Int      @default(0) //still keeping this here for easy quering
   views     Int      @default(0) // will use this when I implement the intersection observer API
   userId    String   @map("user_id")
 
-  comments Comment[]
-  media    Media[]
+  comments  Comment[]
+  media     Media[]
   postLikes PostLikes[]
   postViews PostViews[]
 
   @@map("post")
 }
 
-model PostLikes{
-  postId String @db.Uuid @map("post_id")
+model PostLikes {
+  postId String @map("post_id") @db.Uuid
   userId String @map("user_id")
-
-  @@id([postId, userId])
 
   post Post @relation(fields: [postId], references: [id])
 
-  @@map("post_likes") 
+  @@id([postId, userId])
+  @@map("post_likes")
 }
 
-model PostViews{
-  postId String @db.Uuid @map("post_id")
+model PostViews {
+  postId String @map("post_id") @db.Uuid
   userId String @map("user_id")
-
-  @@id([postId, userId])
 
   post Post @relation(fields: [postId], references: [id])
 
-  @@map("post_views") 
+  @@id([postId, userId])
+  @@map("post_views")
 }
 
 // *****TODO: ATTACH USER TO MEDIA AND POST*****
@@ -56,10 +53,10 @@ model Media {
   type      String   @db.VarChar(20)
   url       String
   userId    String   @map("user_id") //clerk userId
-  postId    String  @db.Uuid
+  postId    String   @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
-  post Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@map("media")
 }
@@ -86,15 +83,14 @@ model Comment {
   @@map("comment")
 }
 
-model CommentLikes{
-  commentId String @db.Uuid @map("comment_id")
-  userId String @map("user_id")
-
-  @@id([commentId, userId])
+model CommentLikes {
+  commentId String @map("comment_id") @db.Uuid
+  userId    String @map("user_id")
 
   post Comment @relation(fields: [commentId], references: [id])
 
-  @@map("comment_likes") 
+  @@id([commentId, userId])
+  @@map("comment_likes")
 }
 
 model Event {

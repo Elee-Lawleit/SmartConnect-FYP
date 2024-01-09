@@ -4,7 +4,10 @@ import { TRPCError } from "@trpc/server"
 import * as z from "zod"
 import { PrismaClient } from "@prisma/client"
 import clerk, { User } from "@clerk/clerk-sdk-node"
-import { ExtendedPost, ExtendedPosts } from "../../../../prisma/typings/ExtendedPost"
+import {
+  ExtendedPost,
+  ExtendedPosts,
+} from "../../../../prisma/typings/ExtendedPost"
 
 const prisma = new PrismaClient()
 
@@ -46,7 +49,8 @@ export const postRouter = router({
                 },
               ],
             },
-            postLikes: true
+            postLikes: true,
+            media: true
           },
         })
 
@@ -118,7 +122,8 @@ export const postRouter = router({
                 },
               ],
             },
-            postLikes : true
+            postLikes: true,
+            media: true
           },
         })) as ExtendedPost
         user = await clerk.users.getUser(post?.userId!)
@@ -140,19 +145,31 @@ export const postRouter = router({
   createPost: privateProcedure
     .input(postSchema)
     .mutation(async ({ ctx, input }) => {
-      const { caption, mediaUrls } = input
+      const { caption, mediaUrls, fileTypes } = input
       const userId = ctx.user.id
 
       if (!caption && mediaUrls?.length == 0) {
         throw new TRPCError({ code: "BAD_REQUEST" })
       }
+
       let post
       try {
         post = await prisma.post.create({
           data: {
             userId: userId,
             caption: caption ?? null,
-            mediaUrls: mediaUrls?.length! > 0 ? mediaUrls : [],
+            media: {
+              createMany: {
+                data: mediaUrls!.map((url, index) => ({
+                  // Assuming fileTypes is an array with the same length as mediaUrls
+                  type: fileTypes![index].startsWith("image")
+                    ? "image"
+                    : "video",
+                  url: url,
+                  userId: ctx.user.id,
+                })),
+              },
+            },
           },
         })
       } catch (error) {

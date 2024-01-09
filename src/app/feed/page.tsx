@@ -7,7 +7,7 @@ const UserFeed = () => {
   return (
       <div className="w-full flex flex-col items-center">
         <CreatePost/>
-        {/* <PostReel /> */}
+        <PostReel />
       </div>
   )
 }
