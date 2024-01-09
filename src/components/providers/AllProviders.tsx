@@ -7,6 +7,7 @@ import { trpc } from "@/server/trpc/client"
 import { httpBatchLink } from "@trpc/client"
 import { ClerkProvider, useUser } from "@clerk/nextjs"
 import { ApolloProvider, ApolloClient, InMemoryCache } from "@apollo/client"
+import { Toaster } from "@/components/ui/toaster"
 
 const Providers = ({ children }: PropsWithChildren) => {
   const [queryClient] = useState(() => new QueryClient())
@@ -38,6 +39,7 @@ const Providers = ({ children }: PropsWithChildren) => {
       <ClerkProvider>
         <WalletEventChange />
         <QueryClientProvider client={queryClient}>
+          <Toaster/>
           <ApolloProvider client={apolloClient}>{children}</ApolloProvider>
         </QueryClientProvider>
       </ClerkProvider>

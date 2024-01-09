@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button"
 import getSignedUrls from "../app/actions/getSignedUrls"
 import { useUser } from "@clerk/nextjs"
 import { trpc } from "@/server/trpc/client"
+import { useToast } from "@/components/ui/use-toast"
 
 const CreatePost = () => {
+  const { toast } = useToast()
+  const utils = trpc.useUtils()
   const { mutate, isLoading } = trpc.postRouter.createPost.useMutation()
 
   const [loading, setLoading] = useState<boolean>(false)
@@ -63,7 +66,7 @@ const CreatePost = () => {
       setLoading(false)
       return
     }
-    let response: any //will deal with the type later
+    let response
     try {
       response = await getSignedUrls(
         fileTypes,
@@ -71,50 +74,75 @@ const CreatePost = () => {
         fileChecksums,
         user?.user!.id
       )
-      if (!response.success) {
-        if (response.code === "BAD_REQUEST" && response.fileType) {
-          // show toast for unsupported file type
-        }
-        if (response.code === "BAD_REQUEST" && response.fileSize) {
-          // file at index + 1 exceeds the size of 50MB
-        } else {
-          // show toast for internal server error
-        }
+    } catch (error: any) {
+      if (error.cause.fileType) {
+        toast({
+          variant: "destructive",
+          title: "Invalid file type.",
+          description: `Invalid file type ${error.cause.fileType} at position ${error.cause.index}`,
+        })
+      } else if (error.cause.fileSize) {
+        toast({
+          variant: "destructive",
+          title: "File size exceeded 50MB.",
+          description: `Too large file size ${error.cause.fileSize} at position ${error.cause.index}`,
+        })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Uh oh! Something went wrong",
+          description: `An internal server error occurred. Please try again later.`,
+        })
       }
-    } catch (error) {
-      //show toast for internal server error
     }
-    setLoading(false)
 
     let mediaUrls: string[] = []
-
-    await Promise.allSettled(
-      response.signedUrls.forEach(async (url: string, index: number) => {
+    if (response) {
+      response.signedUrls.forEach(async (url, index) => {
         mediaUrls.push(url.split("?")[0])
-        try {
-          const response = await fetch(url, {
-            method: "PUT",
-            headers: {
-              "Content-Type": selectedFiles[index].type,
-            },
-            body: selectedFiles[index],
+        const res = await fetch(url, {
+          method: "PUT",
+          headers: {
+            "Content-Type": selectedFiles[index].type,
+          },
+          body: selectedFiles[index],
+        })
+        if (!res.ok) {
+          toast({
+            variant: "destructive",
+            title: "Error uploading media.",
+            description: `An internal server error occurred. Please try again later.`,
           })
-          //handle non okay responses
-          if (!response.ok) {
-            //show toast that upload to s3 failed
-            //don't worry about the which file, just fail all, but I will then need to delete from s3 as well
-            //use the mediaUrls array here to map and delete files, if you don't want ghost files in bucket
-            //because the mediaUrls array contains ALL urls, use the index to figure out which url is not needed
-            //map over the rest and delete from s3
-            return
-          }
-
-          //finally insert in database
-          mutate({ caption, mediaUrls })
-        } catch (error) {
-          //handle fetch errors here, maybe I am over doing it at this point
+          setLoading(false)
+          //show error toast and delete files from s3 (maybe make another server action to do that!)
+          //send the media urls array other than the index that errored out
         }
       })
+    }
+    console.log("Media urls: ", mediaUrls)
+
+    //finally insert in database
+    mutate(
+      { caption, mediaUrls },
+      {
+        onSuccess: () => {
+          toast({
+            color: "green",
+            title: "Post created.",
+            description: "Your post was created successfully.",
+          })
+          utils.postRouter.fetchAllPosts.invalidate()
+          setLoading(false)
+        },
+        onError: () => {
+          toast({
+            variant: "destructive",
+            title: "Uh oh! Something went wrong",
+            description: `An internal server error occurred. Please try again later.`,
+          })
+          setLoading(false)
+        },
+      }
     )
 
     setSelectedFiles([])

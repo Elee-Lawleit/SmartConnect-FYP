@@ -31,23 +31,26 @@ const getSignedUrls = async (
 
     // Check for invalid file type
     if (!isAcceptedFileType(fileType)) {
-      return {
-        success: false,
+      throw new TRPCError({
         code: "BAD_REQUEST",
-        fileType,
         message: `Unsupported file type: ${fileType}.`,
-      }
+        cause: {
+          fileType,
+          index,
+        },
+      })
     }
 
     // Check for file size exceeding the limit
     if (fileSize > maxFileSize) {
-      return {
-        success: false,
+      throw new TRPCError({
         code: "BAD_REQUEST",
-        fileSize,
-        index,
         message: `File size at ${index} exceeds the maximum limit of 50MB.`,
-      }
+        cause: {
+          fileSize,
+          index,
+        },
+      })
     }
   })
 
@@ -83,11 +86,10 @@ const getSignedUrls = async (
 
       signedUrls.push(signedUrl)
     } catch (error) {
-      return {
-        success: false,
+      throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: `An internal server error occured. Please try again later.`,
-      }
+        message: "Error retrieving signed urls. Please try again later.",
+      })
     }
 
     //Attach media to user later
