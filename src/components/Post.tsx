@@ -1,13 +1,7 @@
 "use client"
 import { cn, formatRelativeTime } from "@/lib/utils"
-import {
-  CornerDownLeft,
-  CornerDownRight,
-  Heart,
-  Loader2,
-  Send,
-} from "lucide-react"
-import React, { useEffect, useState } from "react"
+import { Heart, Loader2, Send } from "lucide-react"
+import React, { SyntheticEvent, useEffect, useState } from "react"
 import {
   Carousel,
   CarouselContent,
@@ -17,11 +11,37 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel"
 import { Input } from "./ui/input"
-import { FieldValue, FieldValues, useForm } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { Button } from "./ui/button"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { trpc } from "@/server/trpc/client"
+import Comment from "./Comment"
+
+const organizeComments = (comments: any) => {
+  const commentMap: any = {}
+
+  // First, add all parent comments to the map
+  comments.forEach((comment: any) => {
+    if (comment.parentId === null) {
+      commentMap[comment.id] = {
+        ...comment,
+        replies: [],
+      }
+    }
+  })
+
+  // Then, add replies to their respective parent comment
+  comments.forEach((comment: any) => {
+    if (comment.parentId !== null) {
+      if (commentMap[comment.parentId]) {
+        commentMap[comment.parentId].replies.push(comment)
+      }
+    }
+  })
+
+  return Object.values(commentMap)
+}
 
 interface PostProps {
   id: string
@@ -44,11 +64,11 @@ const Post = ({
   userDisplayName,
   hasUserLiked,
   media,
-  comments
+  comments,
 }: PostProps) => {
-  console.log("media: ", media)
   const [api, setApi] = React.useState<CarouselApi>()
   const [mediaLoaded, setMediaLoaded] = useState<boolean>(false)
+  const [openReply, setOpenReply] = useState<boolean>(false)
 
   const { mutate: createComment, isLoading } =
     trpc.commentRouter.createComment.useMutation()
@@ -73,34 +93,27 @@ const Post = ({
     const setCarouselHeight = () => {
       const currentSlide = api.selectedScrollSnap()
       const slideList: HTMLElement[] = api.slideNodes()
-      console.log("Curent SLide: ", currentSlide)
 
       const slide: ChildNode | null = slideList[currentSlide].firstChild
-      console.log("API: ", api)
-      console.log("Slide: ", slide)
 
       const rootCarouselDiv: HTMLElement = api.containerNode()
       if ((slide as HTMLElement).offsetHeight !== 0 && mediaLoaded) {
         const height = (slide as HTMLElement).offsetHeight
-        console.log("HEIGHT: ", height)
         rootCarouselDiv.style.height = `${height}px`
       }
     }
-    setCarouselHeight() //set initial height
+    setCarouselHeight()
     api.on("slidesInView", setCarouselHeight)
     api.on("select", setCarouselHeight)
-    // return api.off("select", setCarouselHeight); //remove listener
   }, [api, mediaLoaded])
 
   const postComment = (data: any) => {
     console.log("data: ", data)
     createComment(data, {
-      onError: ()=>{
-
-      },
-      onSuccess: ()=>{
+      onError: () => {},
+      onSuccess: () => {
         reset()
-      }
+      },
     })
   }
 
@@ -167,14 +180,18 @@ const Post = ({
                     <CarouselItem key={index} className="align-middle">
                       {media.type === "image" ? (
                         <img
-                          onLoad={() => setMediaLoaded((prev) => prev)}
+                          onLoad={() =>
+                            setMediaLoaded((prev) => (prev ? prev : !prev))
+                          }
                           src={media.url}
                           alt="post image"
-                          className="w-full rounded-md align-middle"
+                          className="w-full h-auto rounded-md align-middle"
                         />
                       ) : (
                         <video
-                          onLoadedData={() => setMediaLoaded((prev) => prev)}
+                          onLoadedData={() =>
+                            setMediaLoaded((prev) => (prev ? prev : !prev))
+                          }
                           src={media.url}
                           controls
                           className="w-full rounded-md align-middle"
@@ -242,51 +259,18 @@ const Post = ({
           {comments.length !== 0 && (
             <>
               {" "}
-              {comments.map((comment: any)=>{
+              {organizeComments(comments).map((comment: any, index: number) => {
                 return (
-                  <div className="flex items-center space-x-2 mt-2">
-                    <img
-                      src="https://placekitten.com/32/32"
-                      alt="User Avatar"
-                      className="w-6 h-6 rounded-full"
-                    />
-                    <div>
-                      <p className="text-gray-800 font-semibold">John Doe</p>
-                      <p className="text-gray-500 text-sm">{comment.text}</p>
-                    </div>
-                  </div>
+                  <Comment
+                    key={comment.id}
+                    comment={comment}
+                    postId={id}
+                    userImageUrl={userImageUrl}
+                  />
                 )
               })}
-              {/* <div className="flex items-center space-x-2 mt-2">
-                <img
-                  src="https://placekitten.com/32/32"
-                  alt="User Avatar"
-                  className="w-6 h-6 rounded-full"
-                />
-                <div>
-                  <p className="text-gray-800 font-semibold">Bob Johnson</p>
-                  <p className="text-gray-500 text-sm">
-                    I can't handle the cuteness! Where can I get one?
-                  </p>
-                </div>
-              </div> */}
             </>
           )}
-          {/* <!-- Reply from John Doe with indentation --> */}
-          {/* <div className="flex items-center space-x-2 mt-2 ml-6">
-            <img
-              src="https://placekitten.com/40/40"
-              alt="User Avatar"
-              className="w-6 h-6 rounded-full"
-            />
-            <div>
-              <p className="text-gray-800 font-semibold">John Doe</p>
-              <p className="text-gray-500 text-sm">
-                That little furball is from a local shelter. You should check it
-                out! 🏠😺
-              </p>
-            </div>
-          </div> */}
           <hr className="mt-2 mb-2" />
           <div className="flex gap-2 items-center mt-3">
             <img

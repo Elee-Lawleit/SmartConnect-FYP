@@ -25,11 +25,9 @@ const PostReel = () => {
     }
   )
 
-  console.log("data: ", data)
 
   const { ref, inView, entry } = useInView()
 
-  console.log("Posts: ", data)
   useEffect(() => {
     if (inView && hasNextPage) {
       fetchNextPage()
