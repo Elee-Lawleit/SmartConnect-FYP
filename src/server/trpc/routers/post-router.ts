@@ -213,7 +213,7 @@ export const postRouter = router({
         postId: z.string().uuid(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { postId } = input
 
       if (!postId) {
@@ -226,6 +226,11 @@ export const postRouter = router({
           data: {
             likes: {
               increment: 1,
+            },
+            postLikes: {
+              create:{
+                userId: ctx.user.id
+              }
             },
           },
           where: {
@@ -257,6 +262,9 @@ export const postRouter = router({
             likes: {
               decrement: 1,
             },
+            postLikes: {
+              deleteMany: {}
+            }
           },
           where: {
             id: postId,

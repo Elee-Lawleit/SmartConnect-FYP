@@ -17,6 +17,8 @@ import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { trpc } from "@/server/trpc/client"
 import Comment from "./Comment"
+import { toast } from "./ui/use-toast"
+import { useUser } from "@clerk/nextjs"
 
 const organizeComments = (comments: any) => {
   const commentMap: any = {}
@@ -50,9 +52,9 @@ interface PostProps {
   createdAt: string
   caption: string
   likes: number
-  hasUserLiked: Boolean
   media?: any
   comments: any
+  postLikes: any
 }
 
 const Post = ({
@@ -62,16 +64,20 @@ const Post = ({
   createdAt,
   likes,
   userDisplayName,
-  hasUserLiked,
   media,
   comments,
+  postLikes,
 }: PostProps) => {
   const [api, setApi] = React.useState<CarouselApi>()
   const [mediaLoaded, setMediaLoaded] = useState<boolean>(false)
   const [openReply, setOpenReply] = useState<boolean>(false)
 
+  const { user } = useUser()
   const { mutate: createComment, isLoading } =
     trpc.commentRouter.createComment.useMutation()
+
+  const { mutate: likePost } = trpc.postRouter.likePost.useMutation()
+  const { mutate: unlikePost } = trpc.postRouter.unlikePost.useMutation()
 
   const commentSchema = z.object({
     text: z.string().min(1),
@@ -115,6 +121,53 @@ const Post = ({
         reset()
       },
     })
+  }
+
+  const updateLikeStatus = () => {
+    console.log("Post status updated")
+
+    if (
+      postLikes.filter((postLike: any) => postLike.userId === user?.id)
+        .length !== 0
+    ) {
+      unlikePost(
+        { postId: id },
+        {
+          onError: () => {
+            toast({
+              variant: "destructive",
+              title: "Couldn't unlike post.",
+              description: "Something went wrong. Please try again later.",
+            })
+          },
+          onSuccess: () => {
+            toast({
+              title: "Success",
+              description: "Post unliked successfully",
+            })
+          },
+        }
+      )
+    } else {
+      likePost(
+        { postId: id },
+        {
+          onError: () => {
+            toast({
+              variant: "destructive",
+              title: "Couldn't like post.",
+              description: "Something went wrong. Please try again later.",
+            })
+          },
+          onSuccess: () => {
+            toast({
+              title: "Success",
+              description: "Post liked successfully",
+            })
+          },
+        }
+      )
+    }
   }
 
   return (
@@ -217,11 +270,26 @@ const Post = ({
         {/* <!-- Like and Comment Section --> */}
         <div className="flex items-center justify-between text-gray-500">
           <div className="flex items-center space-x-2">
-            <button className="flex justify-center items-center gap-2 px-2 hover:bg-gray-50 rounded-full p-1">
+            <button
+              className="flex justify-center items-center gap-2 px-2 hover:bg-gray-50 rounded-full p-1"
+              onClick={updateLikeStatus}
+            >
               <Heart
                 className="h-6 w-6"
-                fill={hasUserLiked ? "#DC143C" : "none"}
-                strokeWidth={hasUserLiked ? "0" : "1"}
+                fill={
+                  postLikes.filter(
+                    (postLike: any) => postLike.userId === user?.id
+                  ).length !== 0
+                    ? "#DC143C"
+                    : "none"
+                }
+                strokeWidth={
+                  postLikes.filter(
+                    (postLike: any) => postLike.userId === user?.id
+                  ).length !== 0
+                    ? "0"
+                    : "1"
+                }
               />
 
               <span className="text-lg">{likes}</span>

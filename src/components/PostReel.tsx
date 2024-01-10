@@ -25,6 +25,8 @@ const PostReel = () => {
     }
   )
 
+  console.log("posts: ", data)
+
 
   const { ref, inView, entry } = useInView()
 
@@ -63,9 +65,9 @@ const PostReel = () => {
                   post?.user?.emailAddresses[0].emailAddress.split("@")[0]) ||
                 ""
               }
-              hasUserLiked={false}
               media={post!.media}
               comments={post!.comments}
+              postLikes={post!.postLikes}
             />
           )
         })
