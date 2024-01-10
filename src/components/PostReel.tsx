@@ -25,6 +25,8 @@ const PostReel = () => {
     }
   )
 
+  console.log("data: ", data)
+
   const { ref, inView, entry } = useInView()
 
   console.log("Posts: ", data)
@@ -47,12 +49,13 @@ const PostReel = () => {
   }
 
   return (
-    <div>
+    <div className="flex flex-col max-w-full mx-auto w-[512px]">
       {data?.pages.map((response) =>
         response.posts.map((post) => {
           return (
             <Post
               key={post?.id}
+              id={post?.id || ""}
               caption={post?.caption || ""}
               createdAt={post?.createdAt || ""}
               likes={post?.likes || 0}
@@ -64,6 +67,7 @@ const PostReel = () => {
               }
               hasUserLiked={false}
               media={post!.media}
+              comments={post!.comments}
             />
           )
         })

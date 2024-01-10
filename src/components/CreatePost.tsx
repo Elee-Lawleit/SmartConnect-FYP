@@ -1,125 +1,129 @@
-"use client"
-import { Textarea } from "@/components/ui/textarea"
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import { ImagePlus, Loader2, Trash2 } from "lucide-react"
-import Image from "next/image"
-import { ChangeEvent, useState } from "react"
-import { Button } from "@/components/ui/button"
-import getSignedUrls from "../app/actions/getSignedUrls"
-import { useUser } from "@clerk/nextjs"
-import { trpc } from "@/server/trpc/client"
-import { useToast } from "@/components/ui/use-toast"
+"use client";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ImagePlus, Loader2, Trash2 } from "lucide-react";
+import Image from "next/image";
+import { ChangeEvent, useState } from "react";
+import { Button } from "@/components/ui/button";
+import getSignedUrls from "../app/actions/getSignedUrls";
+import { useUser } from "@clerk/nextjs";
+import { trpc } from "@/server/trpc/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const CreatePost = () => {
-  const { toast } = useToast()
-  const utils = trpc.useUtils()
-  const { mutate, isLoading } = trpc.postRouter.createPost.useMutation()
+  const { toast } = useToast();
+  const utils = trpc.useUtils();
+  const { mutate, isLoading } = trpc.postRouter.createPost.useMutation();
 
-  const [loading, setLoading] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const [fileTypes, setFileType] = useState<string[]>([])
-  const [fileSizes, setFileSize] = useState<number[]>([])
-  const [fileChecksums, setFileChecksum] = useState<string[]>([])
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fileTypes, setFileType] = useState<string[]>([]);
+  const [fileSizes, setFileSize] = useState<number[]>([]);
+  const [fileChecksums, setFileChecksum] = useState<string[]>([]);
 
-  const [caption, setCaption] = useState<string>("")
+  const [caption, setCaption] = useState<string>("");
 
-  const user = useUser()
+  const user = useUser();
 
   const computeSHA256 = async (file: File) => {
     //do this for media array
-    const buffer = await file.arrayBuffer()
-    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray
       .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("")
-    return hashHex
-  }
+      .join("");
+    return hashHex;
+  };
 
   const handleCaption = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    setCaption(event.target.value)
-  }
+    setCaption(event.target.value);
+  };
 
   const handleImageUploads = async (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      const fileArray = Array.from(event.target.files)
+      const fileArray = Array.from(event.target.files);
 
       if (fileArray.length > 0) {
-        setSelectedFiles((prev) => [...prev, ...fileArray])
-        setFileType((prev) => [...prev, ...fileArray.map((file) => file.type)])
-        setFileSize((prev) => [...prev, ...fileArray.map((file) => file.size)])
+        setSelectedFiles((prev) => [...prev, ...fileArray]);
+        setFileType((prev) => [...prev, ...fileArray.map((file) => file.type)]);
+        setFileSize((prev) => [...prev, ...fileArray.map((file) => file.size)]);
         const checksums = await Promise.all(
           fileArray.map(async (file) => await computeSHA256(file))
-        )
+        );
 
-        setFileChecksum((prev) => [...prev, ...checksums])
+        setFileChecksum((prev) => [...prev, ...checksums]);
       }
     }
-  }
+  };
 
   const uploadPost = async (e: any) => {
-    setLoading(true)
-    e.preventDefault()
+    let error = false;
+    setLoading(true);
+    e.preventDefault();
     if (!caption && selectedFiles.length === 0) {
-      console.log("Cannot post bro...")
-      setLoading(false)
-      return
+      console.log("Cannot post bro...");
+      setLoading(false);
+      return;
     }
-    let response
+    let response;
     try {
       response = await getSignedUrls(
         fileTypes,
         fileSizes,
         fileChecksums,
         user?.user!.id
-      )
+      );
     } catch (error: any) {
       if (error.cause.fileType) {
         toast({
           variant: "destructive",
           title: "Invalid file type.",
           description: `Invalid file type ${error.cause.fileType} at position ${error.cause.index}`,
-        })
+        });
       } else if (error.cause.fileSize) {
         toast({
           variant: "destructive",
           title: "File size exceeded 50MB.",
           description: `Too large file size ${error.cause.fileSize} at position ${error.cause.index}`,
-        })
+        });
       } else {
         toast({
           variant: "destructive",
           title: "Uh oh! Something went wrong",
           description: `An internal server error occurred. Please try again later.`,
-        })
+        });
       }
     }
 
-    let mediaUrls: string[] = []
+    let mediaUrls: string[] = [];
     if (response) {
-      response.signedUrls.forEach(async (url, index) => {
-        mediaUrls.push(url.split("?")[0])
+      for (const [index, url] of response.signedUrls.entries()) {
+        mediaUrls.push(url.split("?")[0]);
         const res = await fetch(url, {
           method: "PUT",
           headers: {
             "Content-Type": selectedFiles[index].type,
           },
           body: selectedFiles[index],
-        })
+        });
         if (!res.ok) {
+          console.log("Res: ", res);
           toast({
             variant: "destructive",
             title: "Error uploading media.",
             description: `An internal server error occurred. Please try again later.`,
-          })
-          setLoading(false)
+          });
+          setLoading(false);
+          error = true;
+          return; //--> this should return from main uploadPost function
           //show error toast and delete files from s3 (maybe make another server action to do that!)
           //send the media urls array other than the index that errored out
         }
-      })
+      }
     }
-    console.log("Media urls: ", mediaUrls)
+    console.log("Media urls: ", mediaUrls);
 
     //finally insert in database
     mutate(
@@ -130,27 +134,27 @@ const CreatePost = () => {
             color: "green",
             title: "Post created.",
             description: "Your post was created successfully.",
-          })
-          utils.postRouter.fetchAllPosts.invalidate()
-          setLoading(false)
+          });
+          utils.postRouter.fetchAllPosts.invalidate();
+          setLoading(false);
         },
         onError: () => {
           toast({
             variant: "destructive",
             title: "Uh oh! Something went wrong",
             description: `An internal server error occurred. Please try again later.`,
-          })
-          setLoading(false)
+          });
+          setLoading(false);
         },
       }
-    )
+    );
 
-    setSelectedFiles([])
-    setFileType([])
-    setFileSize([])
-    setFileChecksum([])
-    setCaption("")
-  }
+    setSelectedFiles([]);
+    setFileType([]);
+    setFileSize([]);
+    setFileChecksum([]);
+    setCaption("");
+  };
 
   return (
     <div className="bg-white p-8 rounded-lg shadow-md mb-3 w-full max-w-lg mx-auto">
@@ -166,7 +170,7 @@ const CreatePost = () => {
             <ScrollArea className="w-full whitespace-nowrap">
               <div className="flex gap-2 rounded-md border w-full">
                 {selectedFiles?.map((file, index) => {
-                  const url = URL.createObjectURL(file)
+                  const url = URL.createObjectURL(file);
                   return (
                     <div key={index} className="shrink-0 relative">
                       {file.type.startsWith("image") ? (
@@ -192,8 +196,8 @@ const CreatePost = () => {
                         onClick={() => {
                           const updatedFiles = selectedFiles.filter(
                             (_, i) => i !== index
-                          )
-                          setSelectedFiles(updatedFiles)
+                          );
+                          setSelectedFiles(updatedFiles);
                         }}
                         title="remove media"
                         aria-label="remove media"
@@ -205,7 +209,7 @@ const CreatePost = () => {
                         />
                       </button>
                     </div>
-                  )
+                  );
                 })}
               </div>
               <ScrollBar orientation="horizontal" />
@@ -245,7 +249,7 @@ const CreatePost = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default CreatePost
+export default CreatePost;

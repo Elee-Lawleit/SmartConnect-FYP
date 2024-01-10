@@ -67,6 +67,7 @@ export const commentRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { text, postId, parentCommentId } = input
+      console.log("data: ", {text, postId})
 
       if (!text || !postId) {
         throw new TRPCError({ code: "BAD_REQUEST" })

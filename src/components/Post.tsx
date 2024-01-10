@@ -1,7 +1,13 @@
 "use client"
-import { formatRelativeTime } from "@/lib/utils"
-import { Heart } from "lucide-react"
-import React, { useEffect } from "react"
+import { cn, formatRelativeTime } from "@/lib/utils"
+import {
+  CornerDownLeft,
+  CornerDownRight,
+  Heart,
+  Loader2,
+  Send,
+} from "lucide-react"
+import React, { useEffect, useState } from "react"
 import {
   Carousel,
   CarouselContent,
@@ -10,8 +16,15 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel"
+import { Input } from "./ui/input"
+import { FieldValue, FieldValues, useForm } from "react-hook-form"
+import { Button } from "./ui/button"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { trpc } from "@/server/trpc/client"
 
 interface PostProps {
+  id: string
   userImageUrl: string
   userDisplayName: string | undefined
   createdAt: string
@@ -19,9 +32,11 @@ interface PostProps {
   likes: number
   hasUserLiked: Boolean
   media?: any
+  comments: any
 }
 
 const Post = ({
+  id,
   userImageUrl,
   caption,
   createdAt,
@@ -29,9 +44,26 @@ const Post = ({
   userDisplayName,
   hasUserLiked,
   media,
+  comments
 }: PostProps) => {
   console.log("media: ", media)
   const [api, setApi] = React.useState<CarouselApi>()
+  const [mediaLoaded, setMediaLoaded] = useState<boolean>(false)
+
+  const { mutate: createComment, isLoading } =
+    trpc.commentRouter.createComment.useMutation()
+
+  const commentSchema = z.object({
+    text: z.string().min(1),
+    postId: z.string().uuid(),
+  })
+
+  const {
+    register,
+    reset,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({ resolver: zodResolver(commentSchema) })
 
   useEffect(() => {
     if (!api) {
@@ -41,22 +73,39 @@ const Post = ({
     const setCarouselHeight = () => {
       const currentSlide = api.selectedScrollSnap()
       const slideList: HTMLElement[] = api.slideNodes()
+      console.log("Curent SLide: ", currentSlide)
 
       const slide: ChildNode | null = slideList[currentSlide].firstChild
+      console.log("API: ", api)
+      console.log("Slide: ", slide)
 
       const rootCarouselDiv: HTMLElement = api.containerNode()
-      if (slide) {
+      if ((slide as HTMLElement).offsetHeight !== 0 && mediaLoaded) {
         const height = (slide as HTMLElement).offsetHeight
+        console.log("HEIGHT: ", height)
         rootCarouselDiv.style.height = `${height}px`
       }
     }
     setCarouselHeight() //set initial height
+    api.on("slidesInView", setCarouselHeight)
     api.on("select", setCarouselHeight)
-    return api.off("select", setCarouselHeight) //remove listener
-  }, [api])
+    // return api.off("select", setCarouselHeight); //remove listener
+  }, [api, mediaLoaded])
+
+  const postComment = (data: any) => {
+    console.log("data: ", data)
+    createComment(data, {
+      onError: ()=>{
+
+      },
+      onSuccess: ()=>{
+        reset()
+      }
+    })
+  }
 
   return (
-    <div className="bg-gray-100 flex items-center mx-auto">
+    <div className="bg-gray-100 ">
       <div className="bg-white p-8 rounded-lg shadow-md max-w-lg">
         {/* <!-- User Info with Three-Dot Menu --> */}
         <div className="flex items-center justify-between mb-4">
@@ -115,15 +164,17 @@ const Post = ({
                 {/* this should adjust height based on CaroselItem */}
                 {media.map((media: any, index: number) => {
                   return (
-                    <CarouselItem key={index}>
+                    <CarouselItem key={index} className="align-middle">
                       {media.type === "image" ? (
                         <img
+                          onLoad={() => setMediaLoaded((prev) => prev)}
                           src={media.url}
                           alt="post image"
                           className="w-full rounded-md align-middle"
                         />
                       ) : (
                         <video
+                          onLoadedData={() => setMediaLoaded((prev) => prev)}
                           src={media.url}
                           controls
                           className="w-full rounded-md align-middle"
@@ -133,8 +184,16 @@ const Post = ({
                   )
                 })}
               </CarouselContent>
-              <CarouselPrevious className="ml-14" />
-              <CarouselNext className="mr-14" />
+              <CarouselPrevious
+                className={cn("ml-14", {
+                  hidden: media.length < 2,
+                })}
+              />
+              <CarouselNext
+                className={cn("mr-14", {
+                  hidden: media.length < 2,
+                })}
+              />
             </Carousel>
           </div>
         )}
@@ -173,40 +232,48 @@ const Post = ({
                 ></path>
               </g>
             </svg>
-            <span>3 Comment</span>
+            <span>{comments.length} Comment(s)</span>
           </button>
         </div>
         <hr className="mt-2 mb-2" />
-        <p className="text-gray-800 font-semibold">Comment</p>
+        <p className="text-gray-800 font-semibold">Comments</p>
         <hr className="mt-2 mb-2" />
         <div className="mt-4">
-          <div className="flex items-center space-x-2">
-            <img
-              src="https://placekitten.com/32/32"
-              alt="User Avatar"
-              className="w-6 h-6 rounded-full"
-            />
-            <div>
-              <p className="text-gray-800 font-semibold">Jane Smith</p>
-              <p className="text-gray-500 text-sm">Lovely shot! 📸</p>
-            </div>
-          </div>
-          {/* <!-- Comment 2 --> */}
-          <div className="flex items-center space-x-2 mt-2">
-            <img
-              src="https://placekitten.com/32/32"
-              alt="User Avatar"
-              className="w-6 h-6 rounded-full"
-            />
-            <div>
-              <p className="text-gray-800 font-semibold">Bob Johnson</p>
-              <p className="text-gray-500 text-sm">
-                I can't handle the cuteness! Where can I get one?
-              </p>
-            </div>
-          </div>
+          {comments.length !== 0 && (
+            <>
+              {" "}
+              {comments.map((comment: any)=>{
+                return (
+                  <div className="flex items-center space-x-2 mt-2">
+                    <img
+                      src="https://placekitten.com/32/32"
+                      alt="User Avatar"
+                      className="w-6 h-6 rounded-full"
+                    />
+                    <div>
+                      <p className="text-gray-800 font-semibold">John Doe</p>
+                      <p className="text-gray-500 text-sm">{comment.text}</p>
+                    </div>
+                  </div>
+                )
+              })}
+              {/* <div className="flex items-center space-x-2 mt-2">
+                <img
+                  src="https://placekitten.com/32/32"
+                  alt="User Avatar"
+                  className="w-6 h-6 rounded-full"
+                />
+                <div>
+                  <p className="text-gray-800 font-semibold">Bob Johnson</p>
+                  <p className="text-gray-500 text-sm">
+                    I can't handle the cuteness! Where can I get one?
+                  </p>
+                </div>
+              </div> */}
+            </>
+          )}
           {/* <!-- Reply from John Doe with indentation --> */}
-          <div className="flex items-center space-x-2 mt-2 ml-6">
+          {/* <div className="flex items-center space-x-2 mt-2 ml-6">
             <img
               src="https://placekitten.com/40/40"
               alt="User Avatar"
@@ -219,6 +286,40 @@ const Post = ({
                 out! 🏠😺
               </p>
             </div>
+          </div> */}
+          <hr className="mt-2 mb-2" />
+          <div className="flex gap-2 items-center mt-3">
+            <img
+              src={userImageUrl}
+              alt="User Avatar"
+              className="w-8 h-8 rounded-full"
+            />
+            <form
+              className="w-full relative"
+              onSubmit={handleSubmit(postComment)}
+            >
+              <Input
+                type="hidden"
+                value={id} // Add hidden field
+                {...register("postId")}
+              />
+              <Input
+                className="rounded-md h-8"
+                placeholder="Post a comment..."
+                {...register("text")}
+              />
+              {!isLoading ? (
+                <Button
+                  className="absolute right-1 -top-1 hover:bg-transparent"
+                  variant="ghost"
+                  type="submit"
+                >
+                  <Send className=" h-4 w-4 text-gray-600" />
+                </Button>
+              ) : (
+                <Loader2 className="absolute right-3 top-2 h-4 w-4 animate-spin text-gray-600" />
+              )}
+            </form>
           </div>
           {/* <!-- Add more comments and replies as needed --> */}
         </div>
