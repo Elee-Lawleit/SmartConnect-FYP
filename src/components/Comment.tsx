@@ -48,18 +48,21 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
     })
   }
 
+  console.log("Comment: ", comment)
+
 
   return (
     <div className="flex flex-col items-start space-x-2 mt-2">
       <div className="flex items-start space-x-2">
         <img
-          src="https://placekitten.com/32/32"
+          src={comment.user.imageUrl}
           alt="User Avatar"
           className="w-6 h-6 rounded-full"
         />
         <div className="flex flex-col justify-start ">
           <div className="flex gap-1 items-center justify-start">
-            <p className="text-gray-800 font-semibold">John Doe</p>
+            <p className="text-gray-800 font-semibold">{comment.user?.username ??
+                  comment?.user?.emailAddresses[0].emailAddress.split("@")[0]}</p>
             <span className="h-fit text-xs">.</span>
             <p className="text-xs h-fit">
               {formatRelativeTime(comment?.createdAt)}
@@ -117,13 +120,14 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
         comment.replies.map((reply: any, index:number) => (
           <div className="flex items-start space-x-2 ml-5 pl-3 mt-3" key={index}>
             <img
-              src="https://placekitten.com/32/32"
+              src={reply.user.imageUrl}
               alt="User Avatar"
               className="w-6 h-6 rounded-full"
             />
             <div className="flex flex-col justify-start">
               <div className="flex gap-1 items-center justify-start">
-                <p className="text-gray-800 font-semibold">John Doe</p>
+                <p className="text-gray-800 font-semibold">{reply.user?.username ??
+                  reply?.user?.emailAddresses[0].emailAddress.split("@")[0]}</p>
                 <span className="h-fit text-xs">.</span>
                 <p className="text-xs h-fit">
                   {formatRelativeTime(reply?.createdAt)}

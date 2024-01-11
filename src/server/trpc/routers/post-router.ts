@@ -5,6 +5,7 @@ import * as z from "zod"
 import { PrismaClient } from "@prisma/client"
 import clerk from "@clerk/clerk-sdk-node"
 import { PostWithRelations } from "../../../../prisma/types"
+import { filterUserForClient } from "../../../server/helpers/filterUserForClient"
 
 const prisma = new PrismaClient()
 
@@ -13,7 +14,7 @@ const addUserDataToPosts = async (posts: PostWithRelations[]) => {
     post.userId,
     ...post.comments.map((comment) => comment.userId),
   ])
-  const usersList = await clerk.users.getUserList({ userId: userIds })
+  const usersList = (await clerk.users.getUserList({ userId: userIds })).map((filterUserForClient))
 
   return posts.map((post) => {
     const user = usersList.find((user) => user.id === post.userId)
@@ -26,6 +27,13 @@ const addUserDataToPosts = async (posts: PostWithRelations[]) => {
 
     const commentsWithUsers = post.comments.map((comment) => {
       const commentUser = usersList.find((user) => user.id === comment.userId)
+      if (!commentUser) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `User for post not found. COMMENT ID: ${comment.id}, USER ID: ${comment.userId}`,
+        })
+      }
+
       return {
         ...comment,
         user: commentUser,
@@ -87,7 +95,6 @@ export const postRouter = router({
       }
       
       const posts = await addUserDataToPosts(rawPosts)
-      console.log("Posts with comments with users inside them: ", posts)
       
       let nextCursor: typeof cursor | undefined = undefined
       

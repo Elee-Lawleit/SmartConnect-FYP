@@ -20,6 +20,7 @@ import Comment from "./Comment"
 import { toast } from "./ui/use-toast"
 import { useUser } from "@clerk/nextjs"
 import { Comment as CommentType, Media, PostLikes } from "@prisma/client"
+import { CommentWithUser } from "../../prisma/types"
 
 const organizeComments = (comments: CommentType[]) => {
   const commentMap: any = {}
