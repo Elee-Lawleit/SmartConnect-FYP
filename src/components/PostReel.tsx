@@ -1,6 +1,6 @@
 "use client"
 
-import React, { RefObject, useEffect } from "react"
+import React, { useEffect } from "react"
 import Post from "./Post"
 import { trpc } from "@/server/trpc/client"
 import { cn } from "@/lib/utils"
@@ -54,20 +54,20 @@ const PostReel = () => {
         response.posts.map((post) => {
           return (
             <Post
-              key={post?.id}
-              id={post?.id || ""}
-              caption={post?.caption || ""}
-              createdAt={post?.createdAt || ""}
-              likes={post?.likes || 0}
+              key={post?.post.id}
+              id={post?.post.id || ""}
+              caption={post?.post.caption || ""}
+              createdAt={post?.post.createdAt || ""}
+              likes={post?.post.likes || 0}
               userImageUrl={post?.user?.imageUrl || ""}
               userDisplayName={
                 (post?.user?.username ??
                   post?.user?.emailAddresses[0].emailAddress.split("@")[0]) ||
                 ""
               }
-              media={post!.media}
+              media={post!.post.media}
               comments={post!.comments}
-              postLikes={post!.postLikes}
+              postLikes={post!.post.postLikes}
             />
           )
         })

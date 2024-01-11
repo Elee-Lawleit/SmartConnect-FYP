@@ -3,14 +3,42 @@ import { privateProcedure, publicProcedure, router } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import * as z from "zod"
 import { PrismaClient } from "@prisma/client"
-import clerk, { User } from "@clerk/clerk-sdk-node"
-import {
-  ExtendedPost,
-  ExtendedPosts,
-} from "../../../../prisma/typings/ExtendedPost"
+import clerk from "@clerk/clerk-sdk-node"
+import { PostWithRelations } from "../../../../prisma/types"
 
 const prisma = new PrismaClient()
 
+const addUserDataToPosts = async (posts: PostWithRelations[]) => {
+  const userIds = posts.flatMap((post) => [
+    post.userId,
+    ...post.comments.map((comment) => comment.userId),
+  ])
+  const usersList = await clerk.users.getUserList({ userId: userIds })
+
+  return posts.map((post) => {
+    const user = usersList.find((user) => user.id === post.userId)
+    if (!user) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `User for post not found. POST ID: ${post.id}, USER ID: ${post.userId}`,
+      })
+    }
+
+    const commentsWithUsers = post.comments.map((comment) => {
+      const commentUser = usersList.find((user) => user.id === comment.userId)
+      return {
+        ...comment,
+        user: commentUser,
+      }
+    })
+
+    return {
+      post,
+      user,
+      comments: commentsWithUsers,
+    }
+  })
+}
 export const postRouter = router({
   fetchAllPosts: publicProcedure
     .input(
@@ -20,11 +48,11 @@ export const postRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
+
       const limit = input.limit ?? 50
       const { cursor } = input
 
-      let posts: ExtendedPosts[] = []
-      let rawPosts
+      let rawPosts: PostWithRelations[]
       try {
         rawPosts = await prisma.post.findMany({
           take: limit + 1,
@@ -50,44 +78,23 @@ export const postRouter = router({
               ],
             },
             postLikes: true,
-            media: true
+            media: true,
           },
-        })
-
-        // Fetch users for each post concurrently
-        const userIds = rawPosts.map((post) => post.userId)
-        const users = await Promise.allSettled(
-          userIds.map((userId) => clerk.users.getUser(userId))
-        )
-
-        function isFulfilledUser(
-          result: PromiseSettledResult<User>
-        ): result is PromiseFulfilledResult<User> {
-          return result.status === "fulfilled"
-        }
-
-        posts = rawPosts.map((post, index) => {
-          const userResult = users[index]
-          const isFulfilled = isFulfilledUser(userResult)
-
-          return {
-            ...post,
-            user: isFulfilled ? userResult.value : null,
-            // media: post.media?.map((mediaId) => media[mediaId]) // If using a separate Media table
-          }
         })
       } catch (error) {
         console.log("🔴 Prisma Error: ", error)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
       }
+      
+      const posts = await addUserDataToPosts(rawPosts)
+      console.log("Posts with comments with users inside them: ", posts)
+      
       let nextCursor: typeof cursor | undefined = undefined
-
+      
       //it means there still are posts to retrieve
-      if (rawPosts.length > limit) {
-        const nextItem = rawPosts.pop()
-        nextCursor = nextItem!.id
-
-        posts.pop()
+      if (posts.length > limit) {
+        const nextItem = posts.pop()
+        nextCursor = nextItem!.post.id
       }
 
       return { success: true, posts, nextCursor }
@@ -104,9 +111,9 @@ export const postRouter = router({
 
       if (!postId) throw new TRPCError({ code: "BAD_REQUEST" })
 
-      let post: ExtendedPost, user
+      let post: PostWithRelations | null
       try {
-        post = (await prisma.post.findFirst({
+        post = await prisma.post.findFirst({
           where: {
             id: postId,
           },
@@ -123,23 +130,19 @@ export const postRouter = router({
               ],
             },
             postLikes: true,
-            media: true
+            media: true,
           },
-        })) as ExtendedPost
-        user = await clerk.users.getUser(post?.userId!)
-        if (post) {
-          post.user = user //->attaching the user here
-        }
+        })
+
+        if (!post) throw new TRPCError({ code: "NOT_FOUND" })
       } catch (error) {
         console.log("🔴 Prisma Error: ", error)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
       }
 
-      if (!post) {
-        throw new TRPCError({ code: "NOT_FOUND" })
-      }
+      const postWithUser = (await addUserDataToPosts([post]))[0]
 
-      return { success: true, post }
+      return { success: true, post: postWithUser }
     }),
 
   createPost: privateProcedure
@@ -228,9 +231,9 @@ export const postRouter = router({
               increment: 1,
             },
             postLikes: {
-              create:{
-                userId: ctx.user.id
-              }
+              create: {
+                userId: ctx.user.id,
+              },
             },
           },
           where: {
@@ -263,8 +266,8 @@ export const postRouter = router({
               decrement: 1,
             },
             postLikes: {
-              deleteMany: {}
-            }
+              deleteMany: {},
+            },
           },
           where: {
             id: postId,

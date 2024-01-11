@@ -1,7 +1,7 @@
 "use client"
 import { cn, formatRelativeTime } from "@/lib/utils"
 import { Heart, Loader2, Send } from "lucide-react"
-import React, { SyntheticEvent, useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import {
   Carousel,
   CarouselContent,
@@ -19,12 +19,13 @@ import { trpc } from "@/server/trpc/client"
 import Comment from "./Comment"
 import { toast } from "./ui/use-toast"
 import { useUser } from "@clerk/nextjs"
+import { Comment as CommentType, Media, PostLikes } from "@prisma/client"
 
-const organizeComments = (comments: any) => {
+const organizeComments = (comments: CommentType[]) => {
   const commentMap: any = {}
 
   // First, add all parent comments to the map
-  comments.forEach((comment: any) => {
+  comments.forEach((comment: CommentType) => {
     if (comment.parentId === null) {
       commentMap[comment.id] = {
         ...comment,
@@ -34,7 +35,7 @@ const organizeComments = (comments: any) => {
   })
 
   // Then, add replies to their respective parent comment
-  comments.forEach((comment: any) => {
+  comments.forEach((comment: CommentType) => {
     if (comment.parentId !== null) {
       if (commentMap[comment.parentId]) {
         commentMap[comment.parentId].replies.push(comment)
@@ -45,6 +46,10 @@ const organizeComments = (comments: any) => {
   return Object.values(commentMap)
 }
 
+type MediaWithStringDate = Omit<Media, "createdAt"> & {
+  createdAt: string // Modified type
+}
+
 interface PostProps {
   id: string
   userImageUrl: string
@@ -52,9 +57,9 @@ interface PostProps {
   createdAt: string
   caption: string
   likes: number
-  media?: any
-  comments: any
-  postLikes: any
+  media?: MediaWithStringDate[]
+  comments?: any
+  postLikes?: PostLikes[]
 }
 
 const Post = ({
@@ -75,7 +80,7 @@ const Post = ({
   const [optimisticLikeStatus, setOptimisticLikeStatus] = useState<boolean>(
     () => {
       return (
-        postLikes.filter((postLike: any) => postLike.userId === user?.id)
+        postLikes?.filter((postLike: any) => postLike.userId === user?.id)
           .length !== 0
       )
     }
@@ -112,12 +117,14 @@ const Post = ({
       const currentSlide = api.selectedScrollSnap()
       const slideList: HTMLElement[] = api.slideNodes()
 
-      const slide: ChildNode | null = slideList[currentSlide].firstChild
+      if (slideList.length > 1) {
+        const slide: ChildNode | null = slideList[currentSlide].firstChild
 
-      const rootCarouselDiv: HTMLElement = api.containerNode()
-      if ((slide as HTMLElement).offsetHeight !== 0 && mediaLoaded) {
-        const height = (slide as HTMLElement).offsetHeight
-        rootCarouselDiv.style.height = `${height}px`
+        const rootCarouselDiv: HTMLElement = api.containerNode()
+        if ((slide as HTMLElement).offsetHeight !== 0 && mediaLoaded) {
+          const height = (slide as HTMLElement).offsetHeight
+          rootCarouselDiv.style.height = `${height}px`
+        }
       }
     }
     setCarouselHeight()
@@ -137,9 +144,9 @@ const Post = ({
   }
 
   const updateLikeStatus = () => {
-
     setOptimisticLikeStatus((prev) => !prev)
     if (
+      postLikes &&
       postLikes.filter((postLike: any) => postLike.userId === user?.id)
         .length !== 0
     ) {
@@ -156,7 +163,7 @@ const Post = ({
               description: "Something went wrong. Please try again later.",
             })
           },
-          onSuccess: async() => {
+          onSuccess: async () => {
             utils.postRouter.fetchAllPosts
               .invalidate()
               .then(() => setInvalidatingQuery(false))
@@ -181,7 +188,7 @@ const Post = ({
               description: "Something went wrong. Please try again later.",
             })
           },
-          onSuccess: async() => {
+          onSuccess: async () => {
             utils.postRouter.fetchAllPosts
               .invalidate()
               .then(() => setInvalidatingQuery(false))
@@ -247,7 +254,7 @@ const Post = ({
             </a> */}
           </p>
         </div>
-        {media.length !== 0 && (
+        {media && (
           <div className="mb-4">
             <Carousel setApi={setApi} orientation="horizontal">
               <CarouselContent>
@@ -331,26 +338,28 @@ const Post = ({
                 ></path>
               </g>
             </svg>
-            <span>{comments.length} Comment(s)</span>
+            <span>{comments?.length} Comment(s)</span>
           </button>
         </div>
         <hr className="mt-2 mb-2" />
         <p className="text-gray-800 font-semibold">Comments</p>
         <hr className="mt-2 mb-2" />
         <div className="mt-4">
-          {comments.length !== 0 && (
+          {comments?.length !== 0 && (
             <>
               {" "}
-              {organizeComments(comments).map((comment: any, index: number) => {
-                return (
-                  <Comment
-                    key={comment.id}
-                    comment={comment}
-                    postId={id}
-                    userImageUrl={userImageUrl}
-                  />
-                )
-              })}
+              {organizeComments(comments!).map(
+                (comment: any, index: number) => {
+                  return (
+                    <Comment
+                      key={comment.id}
+                      comment={comment}
+                      postId={id}
+                      userImageUrl={userImageUrl}
+                    />
+                  )
+                }
+              )}
             </>
           )}
           <hr className="mt-2 mb-2" />
