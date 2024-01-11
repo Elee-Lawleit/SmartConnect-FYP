@@ -19,38 +19,31 @@ import { trpc } from "@/server/trpc/client"
 import Comment from "./Comment"
 import { toast } from "./ui/use-toast"
 import { useUser } from "@clerk/nextjs"
-import { Comment as CommentType, Media, PostLikes } from "@prisma/client"
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog"
-import PostModal from "./PostModal"
-import { ScrollArea } from "./ui/scroll-area"
+import { Media, PostLikes } from "@prisma/client"
 
-const organizeComments = (comments: CommentType[]) => {
+const organizeComments = (comments: any) => {
   const commentMap: any = {}
 
-  // First, add all parent comments to the map
-  comments.forEach((comment: CommentType) => {
-    if (comment.parentId === null) {
-      commentMap[comment.id] = {
-        ...comment,
-        replies: [],
+  if (comments) {
+    // First, add all parent comments to the map
+    comments.forEach((comment: any) => {
+      if (comment.parentId === null) {
+        commentMap[comment.id] = {
+          ...comment,
+          replies: [],
+        }
       }
-    }
-  })
+    })
 
-  // Then, add replies to their respective parent comment
-  comments.forEach((comment: CommentType) => {
-    if (comment.parentId !== null) {
-      if (commentMap[comment.parentId]) {
-        commentMap[comment.parentId].replies.push(comment)
+    // Then, add replies to their respective parent comment
+    comments.forEach((comment: any) => {
+      if (comment.parentId !== null) {
+        if (commentMap[comment.parentId]) {
+          commentMap[comment.parentId].replies.push(comment)
+        }
       }
-    }
-  })
+    })
+  }
 
   return Object.values(commentMap)
 }
@@ -104,6 +97,12 @@ const Post = ({
     trpc.postRouter.likePost.useMutation()
   const { mutate: unlikePost, isLoading: isUnlikingPost } =
     trpc.postRouter.unlikePost.useMutation()
+
+  const { data } = trpc.commentRouter.fetchAllComments.useQuery({
+    postId: id,
+    limit: 10,
+  })
+  console.log("data: ", data)
 
   const commentSchema = z.object({
     text: z.string().min(1),
@@ -211,9 +210,11 @@ const Post = ({
     }
   }
 
+  console.log("asdasd: ", data?.comments)
+
   return (
     <div className="bg-gray-100 ">
-      <div className="bg-white p-8 rounded-lg shadow-md max-w-lg">
+      <div className="bg-white rounded-lg shadow-md max-w-lg">
         {/* <!-- User Info with Three-Dot Menu --> */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
@@ -325,72 +326,49 @@ const Post = ({
               <span className="text-lg">{optimisticLikeCount}</span>
             </button>
           </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <button className="flex justify-center items-center gap-2 px-2 hover:bg-gray-50 rounded-full p-1">
-                <svg
-                  width="22px"
-                  height="22px"
-                  viewBox="0 0 24 24"
-                  className="w-5 h-5 fill-current"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
-                  <g
-                    id="SVGRepo_tracerCarrier"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  ></g>
-                  <g id="SVGRepo_iconCarrier">
-                    <path
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                      d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 13.5997 2.37562 15.1116 3.04346 16.4525C3.22094 16.8088 3.28001 17.2161 3.17712 17.6006L2.58151 19.8267C2.32295 20.793 3.20701 21.677 4.17335 21.4185L6.39939 20.8229C6.78393 20.72 7.19121 20.7791 7.54753 20.9565C8.88837 21.6244 10.4003 22 12 22ZM8 13.25C7.58579 13.25 7.25 13.5858 7.25 14C7.25 14.4142 7.58579 14.75 8 14.75H13.5C13.9142 14.75 14.25 14.4142 14.25 14C14.25 13.5858 13.9142 13.25 13.5 13.25H8ZM7.25 10.5C7.25 10.0858 7.58579 9.75 8 9.75H16C16.4142 9.75 16.75 10.0858 16.75 10.5C16.75 10.9142 16.4142 11.25 16 11.25H8C7.58579 11.25 7.25 10.9142 7.25 10.5Z"
-                    ></path>
-                  </g>
-                </svg>
-                <span>{commentCount} Comment(s)</span>
-              </button>
-            </DialogTrigger>
-            <DialogContent>
-              <ScrollArea className="max-h-[90vh]">
-                <DialogHeader>
-                  <DialogTitle className="text-center">{`${userDisplayName}'s Post`}</DialogTitle>
-                </DialogHeader>
-                <PostModal
-                  caption={caption}
-                  createdAt={createdAt}
-                  id={id}
-                  likes={likes}
-                  userDisplayName={userDisplayName}
-                  userImageUrl={userImageUrl}
-                  media={media}
-                  postLikes={postLikes}
-                  commentCount={commentCount}
-                />
-              </ScrollArea>
-            </DialogContent>
-          </Dialog>
+          <div className="flex justify-center items-center gap-2 px-2 hover:bg-gray-50 rounded-full p-1">
+            <svg
+              width="22px"
+              height="22px"
+              viewBox="0 0 24 24"
+              className="w-5 h-5 fill-current"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
+              <g
+                id="SVGRepo_tracerCarrier"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              ></g>
+              <g id="SVGRepo_iconCarrier">
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 13.5997 2.37562 15.1116 3.04346 16.4525C3.22094 16.8088 3.28001 17.2161 3.17712 17.6006L2.58151 19.8267C2.32295 20.793 3.20701 21.677 4.17335 21.4185L6.39939 20.8229C6.78393 20.72 7.19121 20.7791 7.54753 20.9565C8.88837 21.6244 10.4003 22 12 22ZM8 13.25C7.58579 13.25 7.25 13.5858 7.25 14C7.25 14.4142 7.58579 14.75 8 14.75H13.5C13.9142 14.75 14.25 14.4142 14.25 14C14.25 13.5858 13.9142 13.25 13.5 13.25H8ZM7.25 10.5C7.25 10.0858 7.58579 9.75 8 9.75H16C16.4142 9.75 16.75 10.0858 16.75 10.5C16.75 10.9142 16.4142 11.25 16 11.25H8C7.58579 11.25 7.25 10.9142 7.25 10.5Z"
+                ></path>
+              </g>
+            </svg>
+            <span>{commentCount} Comment(s)</span>
+          </div>
         </div>
         <hr className="mt-2 mb-2" />
-        {/* <p className="text-gray-800 font-semibold">Comments</p>
+        <p className="text-gray-800 font-semibold">Comments</p>
         <hr className="mt-2 mb-2" />
         <div className="mt-4">
-          {comments?.length !== 0 && (
+          {data  && (
             <>
               {" "}
-              {organizeComments(comments!).map(
-                (comment: any, index: number) => {
-                  return (
-                    <Comment
-                      key={comment.id}
-                      comment={comment}
-                      postId={id}
-                      userImageUrl={userImageUrl}
-                    />
-                  )
-                }
-              )}
+              {organizeComments(data.comments).map((comment: any, index: number) => {
+                console.log("Comment: ", comment)
+                return (
+                  <Comment
+                    key={comment.id}
+                    comment={comment}
+                    postId={id}
+                    userImageUrl={userImageUrl}
+                  />
+                )
+              })}
             </>
           )}
           <div className="mt-2">
@@ -430,7 +408,7 @@ const Post = ({
               )}
             </form>
           </div>
-        </div> */}
+        </div>
       </div>
     </div>
   )

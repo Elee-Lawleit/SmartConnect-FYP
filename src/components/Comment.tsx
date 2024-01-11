@@ -73,9 +73,9 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
             </p>
             <span className="h-fit text-xs">.</span>
             <p className="text-xs h-fit">
-              {formatRelativeTime(comment?.createdAt)}
+              {formatRelativeTime(comment?.comment.createdAt)}
             </p>
-            {comment.replies.length > 0 && (
+            {comment.replies?.length > 0 && (
               <>
                 <span className="h-fit text-xs">.</span>
                 <Button
@@ -92,7 +92,7 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
               </>
             )}
           </div>
-          <p className="text-gray-500 text-sm">{comment?.text}</p>
+          <p className="text-gray-500 text-sm">{comment?.comment.text}</p>
           <Button
             onClick={() => setOpenReply((prev) => !prev)}
             variant="link"

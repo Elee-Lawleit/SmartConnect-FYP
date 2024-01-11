@@ -10,42 +10,26 @@ import { filterUserForClient } from "../../../server/helpers/filterUserForClient
 const prisma = new PrismaClient()
 
 const addUserDataToPosts = async (posts: PostWithRelations[]) => {
-  const userIds = posts.flatMap((post) => [
-    post.userId,
-    ...post.comments.map((comment) => comment.userId),
-  ])
-  const usersList = (await clerk.users.getUserList({ userId: userIds })).map(
-    filterUserForClient
-  )
+  const userIds = posts.map((post) => post.userId)
+  const usersList = (
+    await clerk.users.getUserList({
+      userId: userIds,
+    })
+  ).map(filterUserForClient)
 
   return posts.map((post) => {
     const user = usersList.find((user) => user.id === post.userId)
+
     if (!user) {
+      console.error("USER NOT FOUND", post)
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: `User for post not found. POST ID: ${post.id}, USER ID: ${post.userId}`,
+        message: `Author for post not found. POST ID: ${post.id}, USER ID: ${post.userId}`,
       })
     }
-
-    const commentsWithUsers = post.comments.map((comment) => {
-      const commentUser = usersList.find((user) => user.id === comment.userId)
-      if (!commentUser) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `User for post not found. COMMENT ID: ${comment.id}, USER ID: ${comment.userId}`,
-        })
-      }
-
-      return {
-        ...comment,
-        user: commentUser,
-      }
-    })
-
     return {
       post,
       user,
-      comments: commentsWithUsers,
     }
   })
 }
@@ -75,16 +59,11 @@ export const postRouter = router({
             },
           ],
           include: {
-            comments: {
-              take: 10,
-              orderBy: [
-                {
-                  likes: "desc",
-                },
-                {
-                  createdAt: "desc",
-                },
-              ],
+            _count: {
+              select: {
+                comments: true,
+                postLikes: true
+              }
             },
             postLikes: true,
             media: true,
@@ -126,16 +105,11 @@ export const postRouter = router({
             id: postId,
           },
           include: {
-            comments: {
-              take: 10,
-              orderBy: [
-                {
-                  likes: "desc",
-                },
-                {
-                  createdAt: "desc",
-                },
-              ],
+            _count: {
+              select: {
+                comments: true,
+                postLikes: true
+              }
             },
             postLikes: true,
             media: true,

@@ -1,8 +1,7 @@
-import { EmailAddress } from "@clerk/clerk-sdk-node";
 import { Prisma } from "@prisma/client"
 
 export type PostWithRelations = Prisma.PostGetPayload<{
-  include: { comments: true; postLikes: true; media: true }
+  include: { _count: {select: {comments: true, postLikes: true}}; postLikes: true; media: true }
 }>
 
 export type CommentWithRelations = Prisma.CommentGetPayload<{

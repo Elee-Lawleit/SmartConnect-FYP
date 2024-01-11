@@ -49,7 +49,6 @@ export const commentRouter = router({
 
       try {
         rawComments = await prisma.comment.findMany({
-          skip: !cursor ? 10 : undefined,
           take: limit + 1,
           cursor: cursor ? { id: cursor } : undefined,
           orderBy: [

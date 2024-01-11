@@ -58,7 +58,8 @@ const PostReel = () => {
               id={post?.post.id || ""}
               caption={post?.post.caption || ""}
               createdAt={post?.post.createdAt || ""}
-              likes={post?.post.likes || 0}
+              likes={post?.post._count.postLikes || 0}
+              commentCount={post?.post._count.comments || 0}
               userImageUrl={post?.user?.imageUrl || ""}
               userDisplayName={
                 (post?.user?.username ??
@@ -66,7 +67,6 @@ const PostReel = () => {
                 ""
               }
               media={post!.post.media}
-              comments={post!.comments}
               postLikes={post!.post.postLikes}
             />
           )
