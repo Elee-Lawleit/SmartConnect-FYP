@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Loader2, Send } from "lucide-react"
 import { trpc } from "@/server/trpc/client"
+import { Comment as CommentType } from "@prisma/client"
 
 interface CommentProps {
   comment: any
@@ -24,6 +25,7 @@ const commentSchema = z.object({
 const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
   const utils = trpc.useUtils()
   const [openReply, setOpenReply] = useState<boolean>(false)
+  const [showReplies, setShowReplies] = useState<boolean>(false)
 
   const { mutate, isLoading } = trpc.commentRouter.createComment.useMutation()
 
@@ -48,8 +50,12 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
     })
   }
 
-  console.log("Comment: ", comment)
-
+  const sortReplies = (comments: CommentType[]) =>
+    comments.sort(
+      (comment1, comment2) =>
+        new Date(comment1.createdAt).getTime() -
+        new Date(comment2.createdAt).getTime()
+    )
 
   return (
     <div className="flex flex-col items-start space-x-2 mt-2">
@@ -61,12 +67,30 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
         />
         <div className="flex flex-col justify-start ">
           <div className="flex gap-1 items-center justify-start">
-            <p className="text-gray-800 font-semibold">{comment.user?.username ??
-                  comment?.user?.emailAddresses[0].emailAddress.split("@")[0]}</p>
+            <p className="text-gray-800 font-semibold">
+              {comment.user?.username ??
+                comment?.user?.emailAddresses[0].emailAddress.split("@")[0]}
+            </p>
             <span className="h-fit text-xs">.</span>
             <p className="text-xs h-fit">
               {formatRelativeTime(comment?.createdAt)}
             </p>
+            {comment.replies.length > 0 && (
+              <>
+                <span className="h-fit text-xs">.</span>
+                <Button
+                  onClick={() => setShowReplies((prev) => !prev)}
+                  variant="link"
+                  className="text-xs p-0 bg-none h-3 w-fit text-gray-600"
+                >
+                  {!showReplies
+                    ? `Show ${comment.replies.length} repl${
+                        comment.replies.length > 1 ? "ies" : "y"
+                      }`
+                    : "Hide replies"}
+                </Button>
+              </>
+            )}
           </div>
           <p className="text-gray-500 text-sm">{comment?.text}</p>
           <Button
@@ -78,7 +102,6 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
           </Button>
         </div>
       </div>
-
       {openReply && (
         <div className="mt-3 ml-10 w-full flex gap-2">
           <img
@@ -117,8 +140,12 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
         </div>
       )}
       {comment.replies &&
-        comment.replies.map((reply: any, index:number) => (
-          <div className="flex items-start space-x-2 ml-5 pl-3 mt-3" key={index}>
+        showReplies &&
+        sortReplies(comment.replies).map((reply: any, index: number) => (
+          <div
+            className="flex items-start space-x-2 ml-5 pl-3 mt-3"
+            key={index}
+          >
             <img
               src={reply.user.imageUrl}
               alt="User Avatar"
@@ -126,8 +153,10 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
             />
             <div className="flex flex-col justify-start">
               <div className="flex gap-1 items-center justify-start">
-                <p className="text-gray-800 font-semibold">{reply.user?.username ??
-                  reply?.user?.emailAddresses[0].emailAddress.split("@")[0]}</p>
+                <p className="text-gray-800 font-semibold">
+                  {reply.user?.username ??
+                    reply?.user?.emailAddresses[0].emailAddress.split("@")[0]}
+                </p>
                 <span className="h-fit text-xs">.</span>
                 <p className="text-xs h-fit">
                   {formatRelativeTime(reply?.createdAt)}
@@ -136,7 +165,6 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
               <p className="text-gray-500 text-sm">{reply?.text}</p>
             </div>
           </div>
-          
         ))}
     </div>
   )

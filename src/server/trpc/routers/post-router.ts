@@ -14,7 +14,9 @@ const addUserDataToPosts = async (posts: PostWithRelations[]) => {
     post.userId,
     ...post.comments.map((comment) => comment.userId),
   ])
-  const usersList = (await clerk.users.getUserList({ userId: userIds })).map((filterUserForClient))
+  const usersList = (await clerk.users.getUserList({ userId: userIds })).map(
+    filterUserForClient
+  )
 
   return posts.map((post) => {
     const user = usersList.find((user) => user.id === post.userId)
@@ -56,7 +58,6 @@ export const postRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-
       const limit = input.limit ?? 50
       const { cursor } = input
 
@@ -93,11 +94,11 @@ export const postRouter = router({
         console.log("🔴 Prisma Error: ", error)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
       }
-      
+
       const posts = await addUserDataToPosts(rawPosts)
-      
+
       let nextCursor: typeof cursor | undefined = undefined
-      
+
       //it means there still are posts to retrieve
       if (posts.length > limit) {
         const nextItem = posts.pop()

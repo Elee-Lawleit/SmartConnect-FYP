@@ -20,7 +20,6 @@ import Comment from "./Comment"
 import { toast } from "./ui/use-toast"
 import { useUser } from "@clerk/nextjs"
 import { Comment as CommentType, Media, PostLikes } from "@prisma/client"
-import { CommentWithUser } from "../../prisma/types"
 
 const organizeComments = (comments: CommentType[]) => {
   const commentMap: any = {}
@@ -363,6 +362,9 @@ const Post = ({
               )}
             </>
           )}
+          <div className="mt-2">
+            <Button variant="link">Show more comments</Button>
+          </div>
           <hr className="mt-2 mb-2" />
           <div className="flex gap-2 items-center mt-3">
             <img
