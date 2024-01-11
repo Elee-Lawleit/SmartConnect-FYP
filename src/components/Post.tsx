@@ -68,16 +68,28 @@ const Post = ({
   comments,
   postLikes,
 }: PostProps) => {
+  const { user } = useUser()
   const [api, setApi] = React.useState<CarouselApi>()
   const [mediaLoaded, setMediaLoaded] = useState<boolean>(false)
-  const [openReply, setOpenReply] = useState<boolean>(false)
+  const [optimisticLikeCount, setOptimisticLikeCount] = useState<number>(likes)
+  const [optimisticLikeStatus, setOptimisticLikeStatus] = useState<boolean>(
+    () => {
+      return (
+        postLikes.filter((postLike: any) => postLike.userId === user?.id)
+          .length !== 0
+      )
+    }
+  )
+  const [invalidatingQuery, setInvalidatingQuery] = useState<boolean>(false)
+  const utils = trpc.useUtils()
 
-  const { user } = useUser()
   const { mutate: createComment, isLoading } =
     trpc.commentRouter.createComment.useMutation()
 
-  const { mutate: likePost } = trpc.postRouter.likePost.useMutation()
-  const { mutate: unlikePost } = trpc.postRouter.unlikePost.useMutation()
+  const { mutate: likePost, isLoading: isLikingPost } =
+    trpc.postRouter.likePost.useMutation()
+  const { mutate: unlikePost, isLoading: isUnlikingPost } =
+    trpc.postRouter.unlikePost.useMutation()
 
   const commentSchema = z.object({
     text: z.string().min(1),
@@ -119,28 +131,35 @@ const Post = ({
       onError: () => {},
       onSuccess: () => {
         reset()
+        utils.postRouter.fetchAllPosts.invalidate()
       },
     })
   }
 
   const updateLikeStatus = () => {
-    console.log("Post status updated")
 
+    setOptimisticLikeStatus((prev) => !prev)
     if (
       postLikes.filter((postLike: any) => postLike.userId === user?.id)
         .length !== 0
     ) {
+      setOptimisticLikeCount((prev) => prev - 1)
       unlikePost(
         { postId: id },
         {
           onError: () => {
+            setOptimisticLikeCount((prev) => prev + 1)
+            setOptimisticLikeStatus((prev) => !prev)
             toast({
               variant: "destructive",
               title: "Couldn't unlike post.",
               description: "Something went wrong. Please try again later.",
             })
           },
-          onSuccess: () => {
+          onSuccess: async() => {
+            utils.postRouter.fetchAllPosts
+              .invalidate()
+              .then(() => setInvalidatingQuery(false))
             toast({
               title: "Success",
               description: "Post unliked successfully",
@@ -149,17 +168,23 @@ const Post = ({
         }
       )
     } else {
+      setOptimisticLikeCount((prev) => prev + 1)
       likePost(
         { postId: id },
         {
           onError: () => {
+            setOptimisticLikeCount((prev) => prev - 1)
+            setOptimisticLikeStatus((prev) => !prev)
             toast({
               variant: "destructive",
               title: "Couldn't like post.",
               description: "Something went wrong. Please try again later.",
             })
           },
-          onSuccess: () => {
+          onSuccess: async() => {
+            utils.postRouter.fetchAllPosts
+              .invalidate()
+              .then(() => setInvalidatingQuery(false))
             toast({
               title: "Success",
               description: "Post liked successfully",
@@ -273,26 +298,15 @@ const Post = ({
             <button
               className="flex justify-center items-center gap-2 px-2 hover:bg-gray-50 rounded-full p-1"
               onClick={updateLikeStatus}
+              disabled={isLikingPost || isUnlikingPost || invalidatingQuery}
             >
               <Heart
                 className="h-6 w-6"
-                fill={
-                  postLikes.filter(
-                    (postLike: any) => postLike.userId === user?.id
-                  ).length !== 0
-                    ? "#DC143C"
-                    : "none"
-                }
-                strokeWidth={
-                  postLikes.filter(
-                    (postLike: any) => postLike.userId === user?.id
-                  ).length !== 0
-                    ? "0"
-                    : "1"
-                }
+                fill={optimisticLikeStatus ? "#DC143C" : "none"}
+                strokeWidth={optimisticLikeStatus ? "0" : "1"}
               />
 
-              <span className="text-lg">{likes}</span>
+              <span className="text-lg">{optimisticLikeCount}</span>
             </button>
           </div>
           <button className="flex justify-center items-center gap-2 px-2 hover:bg-gray-50 rounded-full p-1">
