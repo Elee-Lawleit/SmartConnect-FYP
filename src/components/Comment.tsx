@@ -12,29 +12,43 @@ import { Comment as CommentType } from "@prisma/client"
 
 interface CommentProps {
   comment: any
-  userImageUrl: string
   postId: string
+  replyCount: number
 }
 
-const commentSchema = z.object({
+const replySchema = z.object({
   text: z.string().min(1),
   postId: z.string().uuid(),
   parentCommentId: z.string().uuid(),
 })
 
-const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
+const Comment = ({ comment, postId, replyCount }: CommentProps) => {
   const utils = trpc.useUtils()
   const [openReply, setOpenReply] = useState<boolean>(false)
   const [showReplies, setShowReplies] = useState<boolean>(false)
 
-  const { mutate, isLoading } = trpc.commentRouter.createComment.useMutation()
+  const { mutate, isLoading: postingReply } =
+    trpc.commentRouter.createComment.useMutation()
+
+  const {
+    data: commentReplies,
+    isLoading: loadingReplies,
+    isError: errorLoadingReplies,
+  } = trpc.commentRouter.fetchAllReplies.useInfiniteQuery(
+    {
+      parentCommentId: comment.comment.id,
+      postId,
+      limit: 20,
+    },
+    { enabled: showReplies }
+  )
 
   const {
     register,
     reset,
     handleSubmit,
     formState: { errors },
-  } = useForm({ resolver: zodResolver(commentSchema) })
+  } = useForm({ resolver: zodResolver(replySchema) })
 
   const postReply = (data: any) => {
     mutate(data, {
@@ -44,18 +58,12 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
       onSuccess: () => {
         reset()
         setOpenReply(false)
-        utils.postRouter.fetchAllPosts.invalidate()
+        utils.commentRouter.fetchAllParentComments.invalidate()
+        utils.commentRouter.fetchAllReplies.invalidate()
         // maybe display a toast here as well, don't really need to tho
       },
     })
   }
-
-  const sortReplies = (comments: CommentType[]) =>
-    comments.sort(
-      (comment1, comment2) =>
-        new Date(comment1.createdAt).getTime() -
-        new Date(comment2.createdAt).getTime()
-    )
 
   return (
     <div className="flex flex-col items-start space-x-2 mt-2">
@@ -75,7 +83,7 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
             <p className="text-xs h-fit">
               {formatRelativeTime(comment?.comment.createdAt)}
             </p>
-            {comment.replies?.length > 0 && (
+            {replyCount > 0 && (
               <>
                 <span className="h-fit text-xs">.</span>
                 <Button
@@ -84,9 +92,9 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
                   className="text-xs p-0 bg-none h-3 w-fit text-gray-600"
                 >
                   {!showReplies
-                    ? `Show ${comment.replies.length} repl${
-                        comment.replies.length > 1 ? "ies" : "y"
-                      }`
+                    ? `Show ${replyCount} repl${replyCount > 1 ? "ies" : "y"}`
+                    : loadingReplies
+                    ? `Loading ${replyCount} repl${replyCount > 1 ? "ies" : "y"}`
                     : "Hide replies"}
                 </Button>
               </>
@@ -105,7 +113,7 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
       {openReply && (
         <div className="mt-3 ml-10 w-full flex gap-2">
           <img
-            src={userImageUrl}
+            src={comment.user.imageUrl}
             alt="User Avatar"
             className="w-8 h-8 rounded-full"
           />
@@ -117,7 +125,7 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
             />
             <Input
               type="hidden"
-              value={comment.id} // Add hidden field
+              value={comment.comment.id} // Add hidden field
               {...register("parentCommentId")}
             />
             <Input
@@ -125,7 +133,7 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
               placeholder="Post a reply..."
               {...register("text")}
             />
-            {!isLoading ? (
+            {!postingReply ? (
               <Button
                 className="absolute right-1 -top-1 hover:bg-transparent"
                 variant="ghost"
@@ -139,33 +147,40 @@ const Comment = ({ comment, userImageUrl, postId }: CommentProps) => {
           </form>
         </div>
       )}
-      {comment.replies &&
-        showReplies &&
-        sortReplies(comment.replies).map((reply: any, index: number) => (
-          <div
-            className="flex items-start space-x-2 ml-5 pl-3 mt-3"
-            key={index}
-          >
-            <img
-              src={reply.user.imageUrl}
-              alt="User Avatar"
-              className="w-6 h-6 rounded-full"
-            />
-            <div className="flex flex-col justify-start">
-              <div className="flex gap-1 items-center justify-start">
-                <p className="text-gray-800 font-semibold">
-                  {reply.user?.username ??
-                    reply?.user?.emailAddresses[0].emailAddress.split("@")[0]}
-                </p>
-                <span className="h-fit text-xs">.</span>
-                <p className="text-xs h-fit">
-                  {formatRelativeTime(reply?.createdAt)}
-                </p>
+      {showReplies &&
+        commentReplies &&
+        commentReplies.pages.map((response) =>
+          response.comments.map((reply) => {
+            console.log("Reply: ", reply)
+            return (
+              <div
+                className="flex items-start space-x-2 ml-5 pl-3 mt-3"
+                key={reply.comment.id}
+              >
+                <img
+                  src={reply.user.imageUrl}
+                  alt="User Avatar"
+                  className="w-6 h-6 rounded-full"
+                />
+                <div className="flex flex-col justify-start">
+                  <div className="flex gap-1 items-center justify-start">
+                    <p className="text-gray-800 font-semibold">
+                      {reply.user?.username ??
+                        reply?.user?.emailAddresses[0].emailAddress.split(
+                          "@"
+                        )[0]}
+                    </p>
+                    <span className="h-fit text-xs">.</span>
+                    <p className="text-xs h-fit">
+                      {formatRelativeTime(reply.comment.createdAt)}
+                    </p>
+                  </div>
+                  <p className="text-gray-500 text-sm">{reply.comment.text}</p>
+                </div>
               </div>
-              <p className="text-gray-500 text-sm">{reply?.text}</p>
-            </div>
-          </div>
-        ))}
+            )
+          })
+        )}
     </div>
   )
 }

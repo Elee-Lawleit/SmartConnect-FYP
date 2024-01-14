@@ -3,7 +3,7 @@ import { privateProcedure, publicProcedure, router } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import { Comment, Prisma, PrismaClient } from "@prisma/client"
 import clerk from "@clerk/clerk-sdk-node"
-import { CommentWithRelations } from "../../../../prisma/types"
+import { ParentCommentsWithReplyCount, ReplyComments } from "../../../../prisma/types"
 
 const prisma = new PrismaClient()
 
@@ -29,7 +29,7 @@ export const addUserDataToComments = async (comments: Comment[]) => {
 }
 
 export const commentRouter = router({
-  fetchAllComments: publicProcedure
+  fetchAllParentComments: publicProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(100).nullish(),
@@ -45,7 +45,7 @@ export const commentRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST" })
       }
 
-      let rawComments: CommentWithRelations[]
+      let rawComments: ParentCommentsWithReplyCount[]
 
       try {
         rawComments = await prisma.comment.findMany({
@@ -60,10 +60,80 @@ export const commentRouter = router({
             },
           ],
           where: {
-            postId: postId,
+            AND: [
+              {
+                postId: postId,
+              },
+              {
+                parentId: null
+              }
+            ],
           },
           include: {
-            replies: true,
+            _count: {
+              select: {
+                replies: true
+              }
+            },
+            commentLikes: true,
+          },
+        })
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
+
+      const comments = await addUserDataToComments(rawComments)
+
+      let nextCursor: typeof cursor | undefined = undefined
+
+      // it means there still are comments to retrieve
+      if (comments.length > limit) {
+        const nextItem = comments.pop()
+        nextCursor = nextItem!.comment.id
+      }
+
+      return { success: true, comments, nextCursor }
+    }),
+  fetchAllReplies: publicProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).nullish(),
+        cursor: z.string().uuid().nullish(),
+        postId: z.string().uuid(),
+        parentCommentId: z.string().uuid()
+      })
+    )
+    .query(async ({ input }) => {
+      const limit = input.limit ?? 50
+      const { cursor, postId, parentCommentId } = input
+
+      if (!postId || !parentCommentId) {
+        throw new TRPCError({ code: "BAD_REQUEST" })
+      }
+
+      let rawComments: ReplyComments[]
+
+      try {
+        rawComments = await prisma.comment.findMany({
+          take: limit + 1,
+          cursor: cursor ? { id: cursor } : undefined,
+          orderBy: [
+            {
+              createdAt: "asc",
+            },
+          ],
+          where: {
+            AND: [
+              {
+                postId: postId,
+              },
+              {
+                parentId: parentCommentId
+              }
+            ],
+          },
+          include: {
             commentLikes: true,
           },
         })
@@ -127,14 +197,18 @@ export const commentRouter = router({
     .query(async ({ input }) => {
       const { commentId } = input
 
-      let rawComment: CommentWithRelations | null
+      let rawComment: ParentCommentsWithReplyCount | null
       try {
         rawComment = await prisma.comment.findFirst({
           where: {
             id: commentId,
           },
           include: {
-            replies: true,
+            _count: {
+              select: {
+                replies: true
+              }
+            },
             commentLikes: true,
           },
         })

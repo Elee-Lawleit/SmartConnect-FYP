@@ -41,7 +41,7 @@ export const postRouter = router({
         cursor: z.string().uuid().nullish(),
       })
     )
-    .query(async ({ input, ctx }) => {
+    .query(async ({ input }) => {
       const limit = input.limit ?? 50
       const { cursor } = input
 

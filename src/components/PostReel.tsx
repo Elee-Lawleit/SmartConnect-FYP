@@ -25,9 +25,6 @@ const PostReel = () => {
     }
   )
 
-  console.log("posts: ", data)
-
-
   const { ref, inView, entry } = useInView()
 
   useEffect(() => {

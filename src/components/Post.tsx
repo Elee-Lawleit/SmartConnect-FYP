@@ -27,8 +27,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog"
-import PostModal from "./PostModal"
 import { ScrollArea } from "./ui/scroll-area"
+import CommentList from "./CommentList"
 
 const organizeComments = (comments: CommentType[]) => {
   const commentMap: any = {}
@@ -142,7 +142,6 @@ const Post = ({
   }, [api, mediaLoaded])
 
   const postComment = (data: any) => {
-    console.log("data: ", data)
     createComment(data, {
       onError: () => {},
       onSuccess: () => {
@@ -317,7 +316,7 @@ const Post = ({
               disabled={isLikingPost || isUnlikingPost || invalidatingQuery}
             >
               <Heart
-                className="h-6 w-6"
+                className={`h-6 w-6 transition-all duration-300 ease-in-out ${optimisticLikeStatus ? 'filled' : ''}`}
                 fill={optimisticLikeStatus ? "#DC143C" : "none"}
                 strokeWidth={optimisticLikeStatus ? "0" : "1"}
               />
@@ -355,19 +354,11 @@ const Post = ({
             <DialogContent>
               <ScrollArea className="max-h-[90vh]">
                 <DialogHeader>
-                  <DialogTitle className="text-center">{`${userDisplayName}'s Post`}</DialogTitle>
+                  <DialogTitle className="text-center">{`${userDisplayName}'s post's comments`}</DialogTitle>
+                  <hr className="mt-2 mb-2" />
                 </DialogHeader>
-                <PostModal
-                  caption={caption}
-                  createdAt={createdAt}
-                  id={id}
-                  likes={likes}
-                  userDisplayName={userDisplayName}
-                  userImageUrl={userImageUrl}
-                  media={media}
-                  postLikes={postLikes}
-                  commentCount={commentCount}
-                />
+                {/* Fetch All the comments inside the comment modal */}
+                <CommentList postId={id}/>
               </ScrollArea>
             </DialogContent>
           </Dialog>
