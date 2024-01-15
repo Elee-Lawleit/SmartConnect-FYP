@@ -15,6 +15,7 @@
     "@aws-sdk/s3-request-presigner": "^3.485.0",
     "@clerk/clerk-sdk-node": "^4.13.4",
     "@clerk/nextjs": "^4.29.1",
+    "@ethersproject/providers": "5.7.2",
     "@hookform/resolvers": "^3.3.4",
     "@prisma/client": "^5.7.1",
     "@radix-ui/react-dialog": "^1.0.5",

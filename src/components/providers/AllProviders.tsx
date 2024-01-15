@@ -8,6 +8,7 @@ import { httpBatchLink } from "@trpc/client"
 import { ClerkProvider, useUser } from "@clerk/nextjs"
 import { ApolloProvider, ApolloClient, InMemoryCache } from "@apollo/client"
 import { Toaster } from "@/components/ui/toaster"
+import { SignerProvider } from "@/contexts/SignerContext"
 
 const Providers = ({ children }: PropsWithChildren) => {
   const [queryClient] = useState(() => new QueryClient())
@@ -37,10 +38,12 @@ const Providers = ({ children }: PropsWithChildren) => {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <ClerkProvider>
-        <WalletEventChange />
+        {/* <WalletEventChange /> */}
         <QueryClientProvider client={queryClient}>
-          <Toaster/>
-          <ApolloProvider client={apolloClient}>{children}</ApolloProvider>
+          <Toaster />
+          <ApolloProvider client={apolloClient}>
+            <SignerProvider>{children}</SignerProvider>
+          </ApolloProvider>
         </QueryClientProvider>
       </ClerkProvider>
     </trpc.Provider>
@@ -49,14 +52,16 @@ const Providers = ({ children }: PropsWithChildren) => {
 
 export default Providers
 
+
+//TODO: change this hook and make it better
+// or just simply remove metamask authentication from clerk. simple, right? 
 const WalletEventChange = () => {
   const { user, isSignedIn } = useUser()
 
   useEffect(() => {
     async function checkWalletConnection() {
-      // @ts-ignore
+      
       if (window.ethereum && user && isSignedIn) {
-        // @ts-ignore
         const accounts = await window.ethereum.request({
           method: "eth_requestAccounts",
         })
@@ -69,7 +74,6 @@ const WalletEventChange = () => {
             "Wallet is not associated with clerk account. It will be disconnected! Please connect a valid wallet address or cancel"
           )
           try {
-            // @ts-ignore
             await window.ethereum.send("wallet_requestPermissions", [
               { eth_accounts: {} },
             ])
@@ -83,16 +87,12 @@ const WalletEventChange = () => {
 
     checkWalletConnection() //initial check
 
-    // @ts-ignore
     if (window.ethereum) {
-      // @ts-ignore
       window.ethereum.on("accountsChanged", checkWalletConnection)
     }
     //remove listener on unmount
     return () => {
-      // @ts-ignore
       if (window.ethereum) {
-        // @ts-ignore
         window.ethereum.removeListener("accountsChanged", checkWalletConnection)
       }
     }

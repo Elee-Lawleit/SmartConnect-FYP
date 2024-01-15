@@ -111,7 +111,7 @@ const Comment = ({ comment, postId, replyCount }: CommentProps) => {
         </div>
       </div>
       {openReply && (
-        <div className="mt-3 ml-10 w-full flex gap-2">
+        <div className="mt-3 ml-10 w-full flex gap-2 mr-3">
           <img
             src={comment.user.imageUrl}
             alt="User Avatar"
