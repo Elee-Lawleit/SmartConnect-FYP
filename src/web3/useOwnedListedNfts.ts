@@ -25,7 +25,7 @@ const useOwnedListedNfts = () => {
 const GET_OWNED_LISTED_NFTS = gql`
     query GetOwnedListedNfts($owner: String!){
         nfts(where: {
-            to: "${process.env.NFT_MARKET_ADDRESS as string}"
+            to: "${process.env.NEXT_PUBLIC_NFT_MARKET_ADDRESS as string}"
             from: $owner
         }) {
             id

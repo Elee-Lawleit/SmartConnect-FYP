@@ -39,6 +39,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.303.0",
     "next": "14.0.4",
+    "nft.storage": "^7.1.1",
     "postgres": "^3.4.3",
     "react": "^18",
     "react-blockies": "^1.4.1",
