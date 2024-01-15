@@ -34,7 +34,7 @@
     "crypto": "^1.0.1",
     "dotenv": "^16.3.1",
     "embla-carousel-react": "8.0.0-rc17",
-    "ethers": "^6.9.1",
+    "ethers": "^5.5.4",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.303.0",

@@ -32,3 +32,17 @@ export type CommentWithUser = {
   postId: string
   parentId: string | null
 }
+
+export type NFT = {
+  id: string
+  owner: string
+  price: string
+  tokenURI: string
+}
+
+//add more fields here like category, type (img|video), etc...
+export type NFTMetadata = {
+  name: string,
+  description: string
+  imageUrl: string
+}
