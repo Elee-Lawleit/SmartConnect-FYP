@@ -123,8 +123,8 @@ dependencies:
     specifier: ^0.8.0
     version: 0.8.0(@types/react-dom@18.2.18)(@types/react@18.2.45)(react-dom@18.2.0)(react@18.2.0)
   web3modal:
-    specifier: ^1.9.12
-    version: 1.9.12(@babel/core@7.23.7)(react-is@16.13.1)
+    specifier: ^1.9.5
+    version: 1.9.5(@babel/core@7.23.7)(react-is@16.13.1)
   zod:
     specifier: ^3.22.4
     version: 3.22.4
@@ -8145,7 +8145,6 @@ packages:
       react: 16.14.0
       scheduler: 0.19.1
     dev: false
-    bundledDependencies: false
 
   /react-dom@18.2.0(react@18.2.0):
     resolution: {integrity: sha512-6IMTriUmvsjHUjNtEDudZfuDQUoWXVxKHhlEGSk81n4YFS+r/Kl99wXiwlVXtPBtJenozv2P+hxDsw9eA7Xo6g==}
@@ -8251,7 +8250,6 @@ packages:
       object-assign: 4.1.1
       prop-types: 15.8.1
     dev: false
-    bundledDependencies: false
 
   /react@18.2.0:
     resolution: {integrity: sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==}
@@ -9539,8 +9537,8 @@ packages:
     engines: {node: '>= 8'}
     dev: false
 
-  /web3modal@1.9.12(@babel/core@7.23.7)(react-is@16.13.1):
-    resolution: {integrity: sha512-RiLY2tNOEUCobtsMTmhwl/FoHZGxRZz7SSdLsh6qbbybPNUO0rFPY8xam9SpPwlLd2cUDGiWkLgDUJde0sHxdw==}
+  /web3modal@1.9.5(@babel/core@7.23.7)(react-is@16.13.1):
+    resolution: {integrity: sha512-L5ME6zgoaCDa+T66skW9WpxGOJX6vU9v+7aLacoQJhU3AMTk784ionpX+Pg4UdhdM+UQW+odge32GkwEX11czQ==}
     deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
     dependencies:
       detect-browser: 5.3.0

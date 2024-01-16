@@ -1,6 +1,12 @@
+"use client"
 import NFTCard from "@/components/marketpalce/NFTCard"
+import useNFTMarketplace from "@/web3/useMarketplace"
 
-const MarketplaceHome = async () => {
+const MarketplaceHome = () => {
+  const { ownedNfts } = useNFTMarketplace()
+
+  console.log("Owned nfts: ", ownedNfts)
+
   return (
     <div className="flex justify-center flex-wrap gap-2 p-3">
       <NFTCard

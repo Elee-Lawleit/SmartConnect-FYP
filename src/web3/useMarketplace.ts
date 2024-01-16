@@ -8,6 +8,7 @@ import { TransactionResponse } from "@ethersproject/providers"
 import { parseEther } from "ethers/lib/utils"
 import { NFT } from "../../prisma/types"
 import { NFTStorage } from "nft.storage"
+import getIpfsURI from "@/app/actions/getIpfsURI"
 
 const useNFTMarketplace = () => {
   const { signer } = useSigner()
@@ -25,15 +26,14 @@ const useNFTMarketplace = () => {
   const ownedListedNfts = useOwnedListedNfts()
   const listedNfts = uesListedNfts()
 
-  //this will receive the json file, the nft image/video will be uploaded inside the page (I COULD technically do it here as well, oh well)
   const createNft = async (name: string, description: string, nft: File) => {
-    console.log("Data: ", { name, description, nft })
-    const metadata = await nftStorageClient.store({
-      name: name,
-      description: description,
-      image: nft
-    })
-    console.log("Metadata: ", metadata)
+    const formData = new FormData()
+    formData.append("name", name)
+    formData.append("description", description)
+    formData.append("nft", nft)
+    const ipfsURI = await getIpfsURI(formData)
+    const tx: TransactionResponse = await nftMarket.createNFT(ipfsURI)
+    await tx.wait()
   }
 
   const listNft = async (tokenId: string, price: BigNumber) => {
