@@ -1,15 +1,16 @@
 import Blockies from "react-blockies"
 
-//just hardcode everything for now
-const AddressAvatar = ({seed}: {seed:string}) => {
+const minifyAddress = (address: string) => {
+  const start = address.substring(0, 5)
+  const end = address.substring(address.length - 4)
+  return `${start}...${end}`
+}
+
+const AddressAvatar = ({ seed }: { seed: string }) => {
   return (
     <div className="flex h-10 items-center">
-      <Blockies
-        size={5}
-        seed="0x98FA01aba583E1dAff7fF5D2464111306669050b"
-        className="mr-2 rounded-md"
-      />
-      <p className="text-xs text-gray-600">0x6B1B...4Ed2C9</p>
+      <Blockies size={5} seed={seed} className="mr-2 rounded-md" />
+      <p className="text-xs text-gray-600">{minifyAddress(seed)}</p>
     </div>
   )
 }

@@ -9,6 +9,7 @@ import { parseEther } from "ethers/lib/utils"
 import { NFT } from "../../prisma/types"
 import { NFTStorage } from "nft.storage"
 import getIpfsURI from "@/app/actions/getIpfsURI"
+import useAllNfts from "./useAllNfts"
 
 const useNFTMarketplace = () => {
   const { signer } = useSigner()
@@ -25,6 +26,7 @@ const useNFTMarketplace = () => {
   const ownedNfts = useOwnedNfts()
   const ownedListedNfts = useOwnedListedNfts()
   const listedNfts = uesListedNfts()
+  const allNfts = useAllNfts()
 
   const createNft = async (name: string, description: string, nft: File) => {
     const formData = new FormData()
@@ -61,6 +63,7 @@ const useNFTMarketplace = () => {
     ...ownedNfts,
     ...ownedListedNfts,
     ...listedNfts,
+    ...allNfts
   }
 }
 

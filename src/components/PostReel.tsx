@@ -104,9 +104,3 @@ const PostReel = () => {
 }
 
 export default PostReel
-
-//will hold all the posts
-
-// <ReactInifiniteScroll>
-//   <Post/>
-// </ReactInifiniteScroll>

@@ -8,7 +8,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Loader2, Send } from "lucide-react"
 import { trpc } from "@/server/trpc/client"
-import { Comment as CommentType } from "@prisma/client"
 
 interface CommentProps {
   comment: any
@@ -94,7 +93,9 @@ const Comment = ({ comment, postId, replyCount }: CommentProps) => {
                   {!showReplies
                     ? `Show ${replyCount} repl${replyCount > 1 ? "ies" : "y"}`
                     : loadingReplies
-                    ? `Loading ${replyCount} repl${replyCount > 1 ? "ies" : "y"}`
+                    ? `Loading ${replyCount} repl${
+                        replyCount > 1 ? "ies" : "y"
+                      }`
                     : "Hide replies"}
                 </Button>
               </>

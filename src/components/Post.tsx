@@ -1,6 +1,6 @@
 "use client"
 import { cn, formatRelativeTime } from "@/lib/utils"
-import { Heart, Loader2, Send } from "lucide-react"
+import { Heart } from "lucide-react"
 import React, { useEffect, useState } from "react"
 import {
   Carousel,
@@ -10,13 +10,7 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel"
-import { Input } from "./ui/input"
-import { useForm } from "react-hook-form"
-import { Button } from "./ui/button"
-import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { trpc } from "@/server/trpc/client"
-import Comment from "./Comment"
 import { toast } from "./ui/use-toast"
 import { useUser } from "@clerk/nextjs"
 import { Comment as CommentType, Media, PostLikes } from "@prisma/client"
@@ -29,31 +23,6 @@ import {
 } from "./ui/dialog"
 import { ScrollArea } from "./ui/scroll-area"
 import CommentList from "./CommentList"
-
-const organizeComments = (comments: CommentType[]) => {
-  const commentMap: any = {}
-
-  // First, add all parent comments to the map
-  comments.forEach((comment: CommentType) => {
-    if (comment.parentId === null) {
-      commentMap[comment.id] = {
-        ...comment,
-        replies: [],
-      }
-    }
-  })
-
-  // Then, add replies to their respective parent comment
-  comments.forEach((comment: CommentType) => {
-    if (comment.parentId !== null) {
-      if (commentMap[comment.parentId]) {
-        commentMap[comment.parentId].replies.push(comment)
-      }
-    }
-  })
-
-  return Object.values(commentMap)
-}
 
 type MediaWithStringDate = Omit<Media, "createdAt"> & {
   createdAt: string // Modified type
@@ -97,25 +66,10 @@ const Post = ({
   const [invalidatingQuery, setInvalidatingQuery] = useState<boolean>(false)
   const utils = trpc.useUtils()
 
-  const { mutate: createComment, isLoading } =
-    trpc.commentRouter.createComment.useMutation()
-
   const { mutate: likePost, isLoading: isLikingPost } =
     trpc.postRouter.likePost.useMutation()
   const { mutate: unlikePost, isLoading: isUnlikingPost } =
     trpc.postRouter.unlikePost.useMutation()
-
-  const commentSchema = z.object({
-    text: z.string().min(1),
-    postId: z.string().uuid(),
-  })
-
-  const {
-    register,
-    reset,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({ resolver: zodResolver(commentSchema) })
 
   useEffect(() => {
     if (!api) {
@@ -140,16 +94,6 @@ const Post = ({
     api.on("slidesInView", setCarouselHeight)
     api.on("select", setCarouselHeight)
   }, [api, mediaLoaded])
-
-  const postComment = (data: any) => {
-    createComment(data, {
-      onError: () => {},
-      onSuccess: () => {
-        reset()
-        utils.postRouter.fetchAllPosts.invalidate()
-      },
-    })
-  }
 
   const updateLikeStatus = () => {
     setOptimisticLikeStatus((prev) => !prev)
@@ -252,9 +196,7 @@ const Post = ({
         </div>
         {/* <!-- Message --> */}
         <div className="mb-4">
-          <p className="text-gray-800">
-            {caption + " "}
-          </p>
+          <p className="text-gray-800">{caption + " "}</p>
         </div>
         {media && (
           <div className="mb-4">
@@ -310,7 +252,9 @@ const Post = ({
               disabled={isLikingPost || isUnlikingPost || invalidatingQuery}
             >
               <Heart
-                className={`h-6 w-6 transition-all duration-300 ease-in-out ${optimisticLikeStatus ? 'filled' : ''}`}
+                className={`h-6 w-6 transition-all duration-300 ease-in-out ${
+                  optimisticLikeStatus ? "filled" : ""
+                }`}
                 fill={optimisticLikeStatus ? "#DC143C" : "none"}
                 strokeWidth={optimisticLikeStatus ? "0" : "1"}
               />
@@ -351,7 +295,7 @@ const Post = ({
                   <DialogTitle className="text-center">{`${userDisplayName}'s post's comments`}</DialogTitle>
                   <hr className="mt-2 mb-2" />
                 </DialogHeader>
-                <CommentList postId={id}/>
+                <CommentList postId={id} />
               </ScrollArea>
             </DialogContent>
           </Dialog>

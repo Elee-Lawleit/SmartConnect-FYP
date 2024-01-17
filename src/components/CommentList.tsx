@@ -64,7 +64,6 @@ const CommentList = ({ postId }: CommentListProps) => {
   }
 
   const createComment = async (data: any) => {
-
     postComment(data, {
       onSuccess: () => {
         toast({ title: "Success", description: "Comment created successfully" })
@@ -122,13 +121,12 @@ const CommentList = ({ postId }: CommentListProps) => {
         {/* all comments will be mapped here */}
         {data?.pages.map((response) =>
           response.comments.map((comment) => {
-
             return (
               <Comment
-              key={comment.comment.id}
-              comment={comment}
-              postId={postId}
-              // @ts-ignore
+                key={comment.comment.id}
+                comment={comment}
+                postId={postId}
+                // @ts-ignore
                 replyCount={comment.comment._count.replies}
               />
             )

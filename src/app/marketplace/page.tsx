@@ -4,13 +4,13 @@ import { Skeleton } from "@/components/ui/skeleton"
 import useNFTMarketplace from "@/web3/useMarketplace"
 
 const MarketplaceHome = () => {
-  const { ownedNfts } = useNFTMarketplace()
+  const { allNfts } = useNFTMarketplace()
 
-  console.log("Owned nfts: ", ownedNfts)
+  console.log("Owned nfts: ", allNfts)
 
-  if (!ownedNfts) {
+  if (!allNfts) {
     return (
-      <div className="flex justify-center flex-wrap gap-2 p-3 border-2">
+      <div className="flex justify-center flex-wrap gap-2 p-3">
         {new Array(2).fill(null).map((_, index) => (
           <Skeleton
             key={index}
@@ -36,14 +36,10 @@ const MarketplaceHome = () => {
 
   return (
     <div className="flex justify-center flex-wrap gap-2 p-3">
-      {ownedNfts?.map((nft) => (
+      {allNfts?.map((nft) => (
         <NFTCard
           key={nft.id}
-          imageUrl={nft.tokenURI}
-          name="Jotaro Kujo"
-          price={nft.price}
-          href=""
-          seed={nft.owner}
+          nft={nft}
         />
       ))}
       {/* <NFTCard
