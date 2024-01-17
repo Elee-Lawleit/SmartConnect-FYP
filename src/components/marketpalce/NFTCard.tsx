@@ -9,9 +9,10 @@ type NFTCardProps = {
   name: string
   price: string
   href: string
+  seed: string
 }
 
-const NFTCard = ({ imageUrl, name, price, href }: NFTCardProps) => {
+const NFTCard = ({ imageUrl, name, price, href, seed }: NFTCardProps) => {
   return (
     <Link
       href={href}
@@ -21,7 +22,7 @@ const NFTCard = ({ imageUrl, name, price, href }: NFTCardProps) => {
         <Image
           fill
           className="w-full h-full object-cover object-center rounded-sm"
-          src={imageUrl}
+          src={`https://ipfs.io/ipfs/${imageUrl.substring(7)}`}
           alt="nft card"
         />
       </div>
@@ -30,7 +31,7 @@ const NFTCard = ({ imageUrl, name, price, href }: NFTCardProps) => {
         <p className=" font-bold">{name}</p>
         <p className="text-xs">{price}</p>
         <div className="flex items-center gap-1">
-          <AddressAvatar />
+          <AddressAvatar seed={seed} />
         </div>
       </div>
     </Link>

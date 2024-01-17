@@ -4,6 +4,7 @@ const nextConfig = {
     domains: [
       "localhost",
       "smart-connect-fyp-bucket.s3.ap-south-1.amazonaws.com",
+      "ipfs.io"
     ],
   },
 }

@@ -1,7 +1,7 @@
 import Blockies from "react-blockies"
 
 //just hardcode everything for now
-const AddressAvatar = () => {
+const AddressAvatar = ({seed}: {seed:string}) => {
   return (
     <div className="flex h-10 items-center">
       <Blockies

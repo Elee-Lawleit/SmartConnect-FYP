@@ -254,12 +254,6 @@ const Post = ({
         <div className="mb-4">
           <p className="text-gray-800">
             {caption + " "}
-            {/* <a href="" className="text-blue-600">
-              #CuteKitten
-            </a>
-            <a href="" className="text-blue-600">
-              #AdventureCat
-            </a> */}
           </p>
         </div>
         {media && (
@@ -357,71 +351,12 @@ const Post = ({
                   <DialogTitle className="text-center">{`${userDisplayName}'s post's comments`}</DialogTitle>
                   <hr className="mt-2 mb-2" />
                 </DialogHeader>
-                {/* Fetch All the comments inside the comment modal */}
                 <CommentList postId={id}/>
               </ScrollArea>
             </DialogContent>
           </Dialog>
         </div>
         <hr className="mt-2 mb-2" />
-        {/* <p className="text-gray-800 font-semibold">Comments</p>
-        <hr className="mt-2 mb-2" />
-        <div className="mt-4">
-          {comments?.length !== 0 && (
-            <>
-              {" "}
-              {organizeComments(comments!).map(
-                (comment: any, index: number) => {
-                  return (
-                    <Comment
-                      key={comment.id}
-                      comment={comment}
-                      postId={id}
-                      userImageUrl={userImageUrl}
-                    />
-                  )
-                }
-              )}
-            </>
-          )}
-          <div className="mt-2">
-            <Button variant="link">Show more comments</Button>
-          </div>
-          <hr className="mt-2 mb-2" />
-          <div className="flex gap-2 items-center mt-3">
-            <img
-              src={userImageUrl}
-              alt="User Avatar"
-              className="w-8 h-8 rounded-full"
-            />
-            <form
-              className="w-full relative"
-              onSubmit={handleSubmit(postComment)}
-            >
-              <Input
-                type="hidden"
-                value={id} // Add hidden field
-                {...register("postId")}
-              />
-              <Input
-                className="rounded-md h-8"
-                placeholder="Post a comment..."
-                {...register("text")}
-              />
-              {!isLoading ? (
-                <Button
-                  className="absolute right-1 -top-1 hover:bg-transparent"
-                  variant="ghost"
-                  type="submit"
-                >
-                  <Send className=" h-4 w-4 text-gray-600" />
-                </Button>
-              ) : (
-                <Loader2 className="absolute right-3 top-2 h-4 w-4 animate-spin text-gray-600" />
-              )}
-            </form>
-          </div>
-        </div> */}
       </div>
     </div>
   )
