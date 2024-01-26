@@ -127,6 +127,64 @@ export const postRouter = router({
       return { success: true, post: postWithUser }
     }),
 
+  fetchUserPosts: privateProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).nullish(),
+        cursor: z.string().uuid().nullish(),
+        userId: z.string()
+      })
+    )
+    .query(async ({ input }) => {
+      const limit = input.limit ?? 50
+      const { cursor, userId } = input
+
+      if(!userId){
+        throw new TRPCError({code: "BAD_REQUEST"})
+      }
+
+      let rawPosts: PostWithRelations[]
+      try {
+        rawPosts = await prisma.post.findMany({
+          where: {
+            userId: userId
+          },
+          take: limit + 1,
+          cursor: cursor ? { id: cursor } : undefined,
+          orderBy: [
+            {
+              createdAt: "desc",
+            },
+          ],
+          include: {
+            _count: {
+              select: {
+                comments: true,
+                postLikes: true,
+              },
+            },
+            postLikes: true,
+            media: true,
+          },
+        })
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
+
+      const posts = await addUserDataToPosts(rawPosts)
+
+      let nextCursor: typeof cursor | undefined = undefined
+
+      //it means there still are posts to retrieve
+      if (posts.length > limit) {
+        const nextItem = posts.pop()
+        nextCursor = nextItem!.post.id
+      }
+
+      return { success: true, posts, nextCursor }
+    }),
+
   createPost: privateProcedure
     .input(postSchema)
     .mutation(async ({ ctx, input }) => {
@@ -266,7 +324,7 @@ export const postRouter = router({
     .input(
       z.object({
         postId: z.string().uuid(),
-        userId: z.string()
+        userId: z.string(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -280,8 +338,8 @@ export const postRouter = router({
         await prisma.savedPosts.create({
           data: {
             postId: postId,
-            userId: userId
-          }
+            userId: userId,
+          },
         })
       } catch (error) {
         console.log("🔴 Prisma Error: ", error)

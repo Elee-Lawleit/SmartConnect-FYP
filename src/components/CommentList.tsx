@@ -41,10 +41,16 @@ const CommentList = ({ postId }: CommentListProps) => {
     isError,
     hasNextPage,
     fetchNextPage,
-  } = trpc.commentRouter.fetchAllParentComments.useInfiniteQuery({
-    postId: postId,
-    limit: 20,
-  })
+    isFetchingNextPage
+  } = trpc.commentRouter.fetchAllParentComments.useInfiniteQuery(
+    {
+      postId: postId,
+      limit: 2,
+    },
+    {
+      getNextPageParam: (lastPageResponse) => lastPageResponse.nextCursor,
+    }
+  )
 
   console.log("Comments: ", data)
 
@@ -132,11 +138,13 @@ const CommentList = ({ postId }: CommentListProps) => {
             )
           })
         )}
-        <div className="mt-2">
-          <Button variant="link" onClick={() => fetchNextPage()}>
-            Show more comments
-          </Button>
-        </div>
+        {hasNextPage && (
+          <div className="mt-2">
+            <Button variant="link" onClick={() => fetchNextPage()}>
+              {!isFetchingNextPage ? "Show more coments" : "Loading..."}
+            </Button>
+          </div>
+        )}
         <hr className="mt-2 mb-2" />
       </div>
     </>
