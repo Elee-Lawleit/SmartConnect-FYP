@@ -55,48 +55,48 @@ export default Providers
 
 //TODO: change this hook and make it better
 // or just simply remove metamask authentication from clerk. simple, right? 
-const WalletEventChange = () => {
-  const { user, isSignedIn } = useUser()
+// const WalletEventChange = () => {
+//   const { user, isSignedIn } = useUser()
 
-  useEffect(() => {
-    async function checkWalletConnection() {
+//   useEffect(() => {
+//     async function checkWalletConnection() {
       
-      if (window.ethereum && user && isSignedIn) {
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        })
-        const [account] = accounts
+//       if (window.ethereum && user && isSignedIn) {
+//         const accounts = await window.ethereum.request({
+//           method: "eth_requestAccounts",
+//         })
+//         const [account] = accounts
 
-        const clerkWeb3Wallets = user?.web3Wallets
-        const wallets = clerkWeb3Wallets.map((wallet) => wallet.web3Wallet)
-        if (!wallets.includes(account)) {
-          window.alert(
-            "Wallet is not associated with clerk account. It will be disconnected! Please connect a valid wallet address or cancel"
-          )
-          try {
-            await window.ethereum.send("wallet_requestPermissions", [
-              { eth_accounts: {} },
-            ])
-          } catch (error: any) {
-            if (error.code == "4001")
-              alert("Wallet disconected. You can connect it anytime!")
-          }
-        }
-      }
-    }
+//         const clerkWeb3Wallets = user?.web3Wallets
+//         const wallets = clerkWeb3Wallets.map((wallet) => wallet.web3Wallet)
+//         if (!wallets.includes(account)) {
+//           window.alert(
+//             "Wallet is not associated with clerk account. It will be disconnected! Please connect a valid wallet address or cancel"
+//           )
+//           try {
+//             await window.ethereum.send("wallet_requestPermissions", [
+//               { eth_accounts: {} },
+//             ])
+//           } catch (error: any) {
+//             if (error.code == "4001")
+//               alert("Wallet disconected. You can connect it anytime!")
+//           }
+//         }
+//       }
+//     }
 
-    checkWalletConnection() //initial check
+//     checkWalletConnection() //initial check
 
-    if (window.ethereum) {
-      window.ethereum.on("accountsChanged", checkWalletConnection)
-    }
-    //remove listener on unmount
-    return () => {
-      if (window.ethereum) {
-        window.ethereum.removeListener("accountsChanged", checkWalletConnection)
-      }
-    }
-  }, [user])
+//     if (window.ethereum) {
+//       window.ethereum.on("accountsChanged", checkWalletConnection)
+//     }
+//     //remove listener on unmount
+//     return () => {
+//       if (window.ethereum) {
+//         window.ethereum.removeListener("accountsChanged", checkWalletConnection)
+//       }
+//     }
+//   }, [user])
 
-  return <></>
-}
+//   return <></>
+// }

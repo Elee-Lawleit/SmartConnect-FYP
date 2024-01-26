@@ -82,6 +82,7 @@ const PostReel = () => {
               }
               media={post!.post.media}
               postLikes={post!.post.postLikes}
+              userId={post.user.id}
             />
           )
         })

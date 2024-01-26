@@ -62,8 +62,8 @@ export const postRouter = router({
             _count: {
               select: {
                 comments: true,
-                postLikes: true
-              }
+                postLikes: true,
+              },
             },
             postLikes: true,
             media: true,
@@ -108,8 +108,8 @@ export const postRouter = router({
             _count: {
               select: {
                 comments: true,
-                postLikes: true
-              }
+                postLikes: true,
+              },
             },
             postLikes: true,
             media: true,
@@ -254,6 +254,34 @@ export const postRouter = router({
           where: {
             id: postId,
           },
+        })
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
+      return { success: true }
+    }),
+
+  savePost: privateProcedure
+    .input(
+      z.object({
+        postId: z.string().uuid(),
+        userId: z.string()
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { postId, userId } = input
+
+      if (!postId || !userId) {
+        throw new TRPCError({ code: "BAD_REQUEST" })
+      }
+
+      try {
+        await prisma.savedPosts.create({
+          data: {
+            postId: postId,
+            userId: userId
+          }
         })
       } catch (error) {
         console.log("🔴 Prisma Error: ", error)

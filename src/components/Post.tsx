@@ -1,6 +1,6 @@
 "use client"
 import { cn, formatRelativeTime } from "@/lib/utils"
-import { Heart } from "lucide-react"
+import { Bookmark, Heart, Trash, Trash2 } from "lucide-react"
 import React, { useEffect, useState } from "react"
 import {
   Carousel,
@@ -23,6 +23,12 @@ import {
 } from "./ui/dialog"
 import { ScrollArea } from "./ui/scroll-area"
 import CommentList from "./CommentList"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu"
 
 type MediaWithStringDate = Omit<Media, "createdAt"> & {
   createdAt: string // Modified type
@@ -38,6 +44,7 @@ interface PostProps {
   media?: MediaWithStringDate[]
   commentCount: number
   postLikes?: PostLikes[]
+  userId: string
 }
 
 const Post = ({
@@ -50,6 +57,7 @@ const Post = ({
   media,
   commentCount,
   postLikes,
+  userId,
 }: PostProps) => {
   const { user } = useUser()
   const [api, setApi] = React.useState<CarouselApi>()
@@ -68,8 +76,21 @@ const Post = ({
 
   const { mutate: likePost, isLoading: isLikingPost } =
     trpc.postRouter.likePost.useMutation()
+
   const { mutate: unlikePost, isLoading: isUnlikingPost } =
     trpc.postRouter.unlikePost.useMutation()
+
+  const {
+    mutate: savePost,
+    isLoading: savingPost,
+    isError: errorSavingPost,
+  } = trpc.postRouter.savePost.useMutation()
+
+  const {
+    mutate: deletePost,
+    isLoading: deletingPost,
+    isError: errorDeletingPost,
+  } = trpc.postRouter.deletePost.useMutation()
 
   useEffect(() => {
     if (!api) {
@@ -175,23 +196,92 @@ const Post = ({
           </div>
           <div className="text-gray-500 cursor-pointer">
             {/* <!-- Three-dot menu icon --> */}
-            <button className="hover:bg-gray-50 rounded-full p-1">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="7" r="1" />
-                <circle cx="12" cy="12" r="1" />
-                <circle cx="12" cy="17" r="1" />
-              </svg>
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="hover:bg-gray-50 rounded-full p-1">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="7" r="1" />
+                    <circle cx="12" cy="12" r="1" />
+                    <circle cx="12" cy="17" r="1" />
+                  </svg>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-40 shadow-lg">
+                <DropdownMenuItem className="flex gap-2 items-center cursor-pointer">
+                  <Bookmark className="w-4 h-4" />
+                  <button
+                    className="text-base font-medium"
+                    onClick={() => {
+                      if (user) {
+                        savePost(
+                          { postId: id, userId: user.id },
+                          {
+                            onSuccess: () => {
+                              toast({
+                                title: "Success",
+                                description: "Post saved successfully",
+                              })
+                            },
+                            onError: () => {
+                              toast({
+                                variant: "destructive",
+                                title: "Couldn't save post",
+                                description:
+                                  "Something went wrong. Please try again later.",
+                              })
+                            },
+                          }
+                        )
+                      }
+                    }}
+                  >
+                    Save Post
+                  </button>
+                </DropdownMenuItem>
+                {user?.id === userId && (
+                  <DropdownMenuItem className="flex gap-2 items-center cursor-pointer">
+                    <Trash2 className="w-4 h-4" />
+                    <button
+                      className="text-base font-medium"
+                      onClick={() => {
+                        deletePost(
+                          { postId: id },
+                          {
+                            onSuccess: () => {
+                              utils.postRouter.fetchAllPosts.invalidate()
+                              toast({
+                                title: "Success",
+                                description: "Post deleted successfully",
+                              })
+                            },
+                            onError: () => {
+                              toast({
+                                variant: "destructive",
+                                title: "Couldn't delete post",
+                                description:
+                                  "Something went wrong. Please try again later.",
+                              })
+                            },
+                          }
+                        )
+                      }}
+                    >
+                      Delete Post
+                    </button>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         {/* <!-- Message --> */}
