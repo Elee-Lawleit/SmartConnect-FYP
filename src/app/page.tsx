@@ -1,10 +1,15 @@
 "use client"
+import GetStarted from "@/components/GetStarted"
+import Landingpage_nav from "@/components/LandingPageNav"
 import { UserButton } from "@clerk/nextjs"
 
 export default function Home() {
   return (
-    <div className="flex justify-center w-full">
-      <UserButton afterSignOutUrl="/sign-in" />
-    </div>
+    <section>
+      <div className=" min-w-screen min-h-screen bg-white">
+        <Landingpage_nav />
+        <GetStarted />
+      </div>
+      </section>
   )
 }

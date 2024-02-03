@@ -6,13 +6,22 @@ import { Button } from "./ui/button"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Loader2, Send } from "lucide-react"
+import {
+  Loader2,
+  MessageSquareReply,
+  Send,
+  ThumbsUp,
+  ThumbsUpIcon,
+} from "lucide-react"
 import { trpc } from "@/server/trpc/client"
+import { toast } from "./ui/use-toast"
+import { useUser } from "@clerk/nextjs"
 
 interface CommentProps {
   comment: any
   postId: string
   replyCount: number
+  commentLikes: any
 }
 
 const replySchema = z.object({
@@ -21,13 +30,24 @@ const replySchema = z.object({
   parentCommentId: z.string().uuid(),
 })
 
-const Comment = ({ comment, postId, replyCount }: CommentProps) => {
+const Comment = ({
+  comment,
+  postId,
+  replyCount,
+  commentLikes,
+}: CommentProps) => {
+  const { user } = useUser()
   const utils = trpc.useUtils()
   const [openReply, setOpenReply] = useState<boolean>(false)
   const [showReplies, setShowReplies] = useState<boolean>(false)
 
   const { mutate, isLoading: postingReply } =
     trpc.commentRouter.createComment.useMutation()
+
+  const { mutate: likeComment, isLoading: likingComment } =
+    trpc.commentRouter.likeComment.useMutation()
+  const { mutate: unlikeComment, isLoading: unLikingComment } =
+    trpc.commentRouter.unlikeComment.useMutation()
 
   const {
     data: commentReplies,
@@ -62,6 +82,55 @@ const Comment = ({ comment, postId, replyCount }: CommentProps) => {
         // maybe display a toast here as well, don't really need to tho
       },
     })
+  }
+
+  const updateLikeStatus = () => {
+    if (
+      commentLikes &&
+      commentLikes?.filter(
+        (commentLike: any) => commentLike.userId === user?.id
+      ).length !== 0
+    ) {
+      unlikeComment(
+        { commentId: comment.comment.id },
+        {
+          onSuccess: () => {
+            utils.commentRouter.fetchAllParentComments.invalidate()
+            toast({
+              title: "Success",
+              description: "Comment unliked successfully",
+            })
+          },
+          onError: () => {
+            toast({
+              variant: "destructive",
+              title: "Couldn't unlike comment.",
+              description: "Something went wrong. Please try again later.",
+            })
+          },
+        }
+      )
+    } else {
+      likeComment(
+        { commentId: comment.comment.id },
+        {
+          onSuccess: () => {
+            utils.commentRouter.fetchAllParentComments.invalidate()
+            toast({
+              title: "Success",
+              description: "Comment liked successfully",
+            })
+          },
+          onError: () => {
+            toast({
+              variant: "destructive",
+              title: "Couldn't like comment.",
+              description: "Something went wrong. Please try again later.",
+            })
+          },
+        }
+      )
+    }
   }
 
   return (
@@ -102,13 +171,34 @@ const Comment = ({ comment, postId, replyCount }: CommentProps) => {
             )}
           </div>
           <p className="text-gray-500 text-sm">{comment?.comment.text}</p>
-          <Button
-            onClick={() => setOpenReply((prev) => !prev)}
-            variant="link"
-            className="text-xs p-0 bg-none h-3 w-fit"
-          >
-            reply
-          </Button>
+          <div className="flex gap-2 mt-2">
+            <Button
+              onClick={() => setOpenReply((prev) => !prev)}
+              variant="link"
+              className="text-xs p-0 bg-none h-3 w-fit"
+            >
+              <MessageSquareReply className="h-4 w-4" />
+            </Button>
+            <div className="flex gap-2 items-start">
+              <Button
+                onClick={() => updateLikeStatus()}
+                variant="link"
+                className="text-xs p-0 bg-none h-3 w-fit"
+              >
+                <ThumbsUpIcon
+                  className="h-4 w-4 "
+                  fill={
+                    commentLikes?.filter(
+                      (postLike: any) => postLike.userId === user?.id
+                    ).length !== 0
+                      ? "#4267b2"
+                      : "none"
+                  }
+                />
+              </Button>
+              <span className="text-xs">{comment.comment.likes}</span>
+            </div>
+          </div>
         </div>
       </div>
       {openReply && (

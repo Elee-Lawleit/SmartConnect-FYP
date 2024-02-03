@@ -134,6 +134,8 @@ const CommentList = ({ postId }: CommentListProps) => {
                 postId={postId}
                 // @ts-ignore
                 replyCount={comment.comment._count.replies}
+                // @ts-ignore
+                commentLikes={comment.comment.commentLikes}
               />
             )
           })

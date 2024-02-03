@@ -287,7 +287,7 @@ export const commentRouter = router({
         commentId: z.string().uuid(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { commentId } = input
 
       if (!commentId) {
@@ -300,6 +300,11 @@ export const commentRouter = router({
             likes: {
               increment: 1,
             },
+            commentLikes: {
+              create: {
+                userId: ctx.user.id
+              }
+            }
           },
           where: {
             id: commentId,
@@ -330,6 +335,9 @@ export const commentRouter = router({
             likes: {
               decrement: 1,
             },
+            commentLikes: {
+              deleteMany: {}
+            }
           },
           where: {
             id: commentId,
