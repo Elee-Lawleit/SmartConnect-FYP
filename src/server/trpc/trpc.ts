@@ -8,15 +8,10 @@ const middleware = t.middleware
 
 //will later change to protect routes
 const authMiddleware = middleware(async ({ ctx, next }) => {
-  const cookies = new Cookies(ctx.req, ctx.res)
-  const sessionToken = cookies.get("__session") as string
-  let user = null
-  try {
-    const decodeInfo = await clerk.verifyToken(sessionToken)
-    const userId = decodeInfo.sub
-    user = await clerk.users.getUser(userId)
 
-    if (!user) {
+  try {
+
+    if (!ctx.user) {
       throw new TRPCError({ code: "UNAUTHORIZED" })
     }
   } catch (error) {
@@ -24,9 +19,11 @@ const authMiddleware = middleware(async ({ ctx, next }) => {
     throw new TRPCError({code: "INTERNAL_SERVER_ERROR"})
   }
 
+  //don't need to attach the user here again,
+  //just doing this to make ts happy (errors bc in case the returned user is null from the createContext())
   return next({
     ctx: {
-      user: user
+      user: ctx.user
     },
   })
 })

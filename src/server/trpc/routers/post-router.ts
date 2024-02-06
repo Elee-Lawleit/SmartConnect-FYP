@@ -7,7 +7,6 @@ import clerk from "@clerk/clerk-sdk-node"
 import { PostWithRelations } from "../../../../prisma/types"
 import { filterUserForClient } from "../../../server/helpers/filterUserForClient"
 
-const prisma = new PrismaClient()
 
 const addUserDataToPosts = async (posts: PostWithRelations[]) => {
   const userIds = posts.map((post) => post.userId)
@@ -41,13 +40,13 @@ export const postRouter = router({
         cursor: z.string().uuid().nullish(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const limit = input.limit ?? 50
       const { cursor } = input
 
       let rawPosts: PostWithRelations[]
       try {
-        rawPosts = await prisma.post.findMany({
+        rawPosts = await ctx.prisma.post.findMany({
           take: limit + 1,
           cursor: cursor ? { id: cursor } : undefined,
           orderBy: [
@@ -93,14 +92,14 @@ export const postRouter = router({
         postId: z.string().uuid(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const { postId } = input
 
       if (!postId) throw new TRPCError({ code: "BAD_REQUEST" })
 
       let post: PostWithRelations | null
       try {
-        post = await prisma.post.findFirst({
+        post = await ctx.prisma.post.findFirst({
           where: {
             id: postId,
           },
@@ -132,22 +131,22 @@ export const postRouter = router({
       z.object({
         limit: z.number().min(1).max(50).nullish(),
         cursor: z.string().uuid().nullish(),
-        userId: z.string()
+        userId: z.string(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const limit = input.limit ?? 50
       const { cursor, userId } = input
 
-      if(!userId){
-        throw new TRPCError({code: "BAD_REQUEST"})
+      if (!userId) {
+        throw new TRPCError({ code: "BAD_REQUEST" })
       }
 
       let rawPosts: PostWithRelations[]
       try {
-        rawPosts = await prisma.post.findMany({
+        rawPosts = await ctx.prisma.post.findMany({
           where: {
-            userId: userId
+            userId: userId,
           },
           take: limit + 1,
           cursor: cursor ? { id: cursor } : undefined,
@@ -197,7 +196,7 @@ export const postRouter = router({
 
       let post
       try {
-        post = await prisma.post.create({
+        post = await ctx.prisma.post.create({
           data: {
             userId: userId,
             caption: caption ?? null,
@@ -237,7 +236,7 @@ export const postRouter = router({
       }
 
       try {
-        const batchPayload = await prisma.post.deleteMany({
+        const batchPayload = await ctx.prisma.post.deleteMany({
           where: {
             id: postId,
             userId: ctx.user.id,
@@ -265,7 +264,7 @@ export const postRouter = router({
 
       try {
         //maybe make this more secure later by checking if the user has already liked the post
-        await prisma.post.update({
+        await ctx.prisma.post.update({
           data: {
             likes: {
               increment: 1,
@@ -292,7 +291,7 @@ export const postRouter = router({
         postId: z.string().uuid(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { postId } = input
 
       if (!postId) {
@@ -300,7 +299,7 @@ export const postRouter = router({
       }
 
       try {
-        await prisma.post.update({
+        await ctx.prisma.post.update({
           data: {
             likes: {
               decrement: 1,
@@ -335,7 +334,7 @@ export const postRouter = router({
       }
 
       try {
-        await prisma.savedPosts.create({
+        await ctx.prisma.savedPosts.create({
           data: {
             postId: postId,
             userId: userId,

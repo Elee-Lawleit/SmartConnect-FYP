@@ -3,9 +3,10 @@ import { privateProcedure, publicProcedure, router } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import { Comment, Prisma, PrismaClient } from "@prisma/client"
 import clerk from "@clerk/clerk-sdk-node"
-import { ParentCommentsWithReplyCount, ReplyComments } from "../../../../prisma/types"
-
-const prisma = new PrismaClient()
+import {
+  ParentCommentsWithReplyCount,
+  ReplyComments,
+} from "../../../../prisma/types"
 
 export const addUserDataToComments = async (comments: Comment[]) => {
   const userIds = comments.map((comment) => comment.userId)
@@ -37,7 +38,7 @@ export const commentRouter = router({
         postId: z.string().uuid(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const limit = input.limit ?? 50
       const { cursor, postId } = input
 
@@ -48,7 +49,7 @@ export const commentRouter = router({
       let rawComments: ParentCommentsWithReplyCount[]
 
       try {
-        rawComments = await prisma.comment.findMany({
+        rawComments = await ctx.prisma.comment.findMany({
           take: limit + 1,
           cursor: cursor ? { id: cursor } : undefined,
           orderBy: [
@@ -65,15 +66,15 @@ export const commentRouter = router({
                 postId: postId,
               },
               {
-                parentId: null
-              }
+                parentId: null,
+              },
             ],
           },
           include: {
             _count: {
               select: {
-                replies: true
-              }
+                replies: true,
+              },
             },
             commentLikes: true,
           },
@@ -101,10 +102,10 @@ export const commentRouter = router({
         limit: z.number().min(1).max(100).nullish(),
         cursor: z.string().uuid().nullish(),
         postId: z.string().uuid(),
-        parentCommentId: z.string().uuid()
+        parentCommentId: z.string().uuid(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const limit = input.limit ?? 50
       const { cursor, postId, parentCommentId } = input
 
@@ -115,7 +116,7 @@ export const commentRouter = router({
       let rawComments: ReplyComments[]
 
       try {
-        rawComments = await prisma.comment.findMany({
+        rawComments = await ctx.prisma.comment.findMany({
           take: limit + 1,
           cursor: cursor ? { id: cursor } : undefined,
           orderBy: [
@@ -129,8 +130,8 @@ export const commentRouter = router({
                 postId: postId,
               },
               {
-                parentId: parentCommentId
-              }
+                parentId: parentCommentId,
+              },
             ],
           },
           include: {
@@ -173,7 +174,7 @@ export const commentRouter = router({
 
       let comment
       try {
-        comment = await prisma.comment.create({
+        comment = await ctx.prisma.comment.create({
           data: {
             userId: ctx.user.id,
             text: text,
@@ -194,20 +195,20 @@ export const commentRouter = router({
         commentId: z.string().uuid(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const { commentId } = input
 
       let rawComment: ParentCommentsWithReplyCount | null
       try {
-        rawComment = await prisma.comment.findFirst({
+        rawComment = await ctx.prisma.comment.findFirst({
           where: {
             id: commentId,
           },
           include: {
             _count: {
               select: {
-                replies: true
-              }
+                replies: true,
+              },
             },
             commentLikes: true,
           },
@@ -240,7 +241,7 @@ export const commentRouter = router({
       }
 
       try {
-        await prisma.comment.update({
+        await ctx.prisma.comment.update({
           data: {
             text: text,
           },
@@ -269,7 +270,7 @@ export const commentRouter = router({
       }
 
       try {
-        await prisma.comment.delete({
+        await ctx.prisma.comment.delete({
           where: {
             id: commentId,
             userId: ctx.user.id,
@@ -295,16 +296,16 @@ export const commentRouter = router({
       }
 
       try {
-        await prisma.comment.update({
+        await ctx.prisma.comment.update({
           data: {
             likes: {
               increment: 1,
             },
             commentLikes: {
               create: {
-                userId: ctx.user.id
-              }
-            }
+                userId: ctx.user.id,
+              },
+            },
           },
           where: {
             id: commentId,
@@ -322,7 +323,7 @@ export const commentRouter = router({
         commentId: z.string().uuid(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { commentId } = input
 
       if (!commentId) {
@@ -330,14 +331,14 @@ export const commentRouter = router({
       }
 
       try {
-        await prisma.comment.update({
+        await ctx.prisma.comment.update({
           data: {
             likes: {
               decrement: 1,
             },
             commentLikes: {
-              deleteMany: {}
-            }
+              deleteMany: {},
+            },
           },
           where: {
             id: commentId,
