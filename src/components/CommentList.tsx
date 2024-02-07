@@ -88,7 +88,7 @@ const CommentList = ({ postId }: CommentListProps) => {
   return (
     <>
       {/* <hr className="mt-2 mb-2" /> */}
-      <div className="mt-4">
+      <div className="mt-4 max-w-full mx-auto w-[512px]">
         {/* post comment form on top now */}
         <div className="flex gap-2 items-center mt-3">
           <img

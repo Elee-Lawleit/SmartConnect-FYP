@@ -1,7 +1,14 @@
 "use client"
 import { cn, formatRelativeTime } from "@/lib/utils"
-import { Bookmark, Heart, Trash, Trash2 } from "lucide-react"
-import React, { useEffect, useState } from "react"
+import {
+  Bookmark,
+  Heart,
+  Repeat,
+  Trash,
+  Trash2,
+  TwitterIcon,
+} from "lucide-react"
+import React, { useEffect, useRef, useState } from "react"
 import {
   Carousel,
   CarouselContent,
@@ -29,6 +36,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
 type MediaWithStringDate = Omit<Media, "createdAt"> & {
   createdAt: string // Modified type
@@ -60,6 +70,10 @@ const Post = ({
   userId,
 }: PostProps) => {
   const { user } = useUser()
+
+  const [isCopied, setIsCopied] = useState(false)
+  const copyElement = useRef<HTMLInputElement | null>(null)
+
   const [api, setApi] = React.useState<CarouselApi>()
   const [mediaLoaded, setMediaLoaded] = useState<boolean>(false)
   const [optimisticLikeCount, setOptimisticLikeCount] = useState<number>(likes)
@@ -176,7 +190,7 @@ const Post = ({
   }
 
   return (
-    <div className="bg-gray-100 ">
+    <div className="bg-gray-100 max-w-full mx-auto w-[512px]">
       <div className="bg-white p-8 rounded-lg shadow-md max-w-lg">
         {/* <!-- User Info with Three-Dot Menu --> */}
         <div className="flex items-center justify-between mb-4">
@@ -389,6 +403,66 @@ const Post = ({
               </ScrollArea>
             </DialogContent>
           </Dialog>
+          <div>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost">
+                  Share Post <Repeat className="h-4 w-4 ml-1.5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <div>
+                  <div>
+                    <Button className="text-sm leading-none" variant="ghost">
+                      Share
+                    </Button>
+                  </div>
+                  <div className="max-w-sm">
+                    <div>
+                      <div>Share Post</div>
+                      <div>Share the post with others.</div>
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <Label className="sr-only" htmlFor="link">
+                          Link
+                        </Label>
+                        <Input
+                          className="flex-1 text-sm"
+                          id="link"
+                          placeholder="Link"
+                          readOnly
+                          value={`${process.env.NEXT_PUBLIC_SERVER_URL}/post/${id}`}
+                          ref={copyElement}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            if (copyElement.current) {
+                              const link = copyElement.current.value
+                              if (navigator.clipboard) {
+                                navigator.clipboard.writeText(link).then(() => {
+                                  setIsCopied(true)
+                                  setTimeout(() => setIsCopied(false), 3000)
+                                  return
+                                })
+                                copyElement.current.select()
+                                document.execCommand("copy")
+                                setIsCopied(true)
+                                setTimeout(() => setIsCopied(false), 3000)
+                              }
+                            }
+                          }}
+                        >
+                          {isCopied ? "Copied!" : "Copy"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
         <hr className="mt-2 mb-2" />
       </div>

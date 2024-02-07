@@ -1,7 +1,5 @@
 import { TRPCError, initTRPC } from "@trpc/server"
 import { ExpressContext } from "../server"
-import Cookies from "cookies"
-import clerk from "@clerk/clerk-sdk-node"
 
 const t = initTRPC.context<ExpressContext>().create()
 const middleware = t.middleware

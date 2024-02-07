@@ -98,7 +98,7 @@ export const postRouter = router({
       if (!postId) throw new TRPCError({ code: "BAD_REQUEST" })
 
       let post: PostWithRelations | null
-      try {
+      
         post = await ctx.prisma.post.findFirst({
           where: {
             id: postId,
@@ -116,10 +116,9 @@ export const postRouter = router({
         })
 
         if (!post) throw new TRPCError({ code: "NOT_FOUND" })
-      } catch (error) {
-        console.log("🔴 Prisma Error: ", error)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-      }
+      
+  
+      
 
       const postWithUser = (await addUserDataToPosts([post]))[0]
 
