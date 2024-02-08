@@ -55,6 +55,7 @@ interface PostProps {
   commentCount: number
   postLikes?: PostLikes[]
   userId: string
+  isLikedByUser: boolean
 }
 
 const Post = ({
@@ -68,6 +69,7 @@ const Post = ({
   commentCount,
   postLikes,
   userId,
+  isLikedByUser,
 }: PostProps) => {
   const { user } = useUser()
 
@@ -77,14 +79,7 @@ const Post = ({
   const [api, setApi] = React.useState<CarouselApi>()
   const [mediaLoaded, setMediaLoaded] = useState<boolean>(false)
   const [optimisticLikeCount, setOptimisticLikeCount] = useState<number>(likes)
-  const [optimisticLikeStatus, setOptimisticLikeStatus] = useState<boolean>(
-    () => {
-      return (
-        postLikes?.filter((postLike: any) => postLike.userId === user?.id)
-          .length !== 0
-      )
-    }
-  )
+  const [optimisticLikeStatus, setOptimisticLikeStatus] = useState<boolean>(isLikedByUser)
   const [invalidatingQuery, setInvalidatingQuery] = useState<boolean>(false)
   const utils = trpc.useUtils()
 

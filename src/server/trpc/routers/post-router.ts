@@ -7,7 +7,6 @@ import clerk from "@clerk/clerk-sdk-node"
 import { PostWithRelations } from "../../../../prisma/types"
 import { filterUserForClient } from "../../../server/helpers/filterUserForClient"
 
-
 const addUserDataToPosts = async (posts: PostWithRelations[]) => {
   const userIds = posts.map((post) => post.userId)
   const usersList = (
@@ -73,7 +72,16 @@ export const postRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
       }
 
-      const posts = await addUserDataToPosts(rawPosts)
+      let posts = await addUserDataToPosts(rawPosts)
+
+      posts = posts.map((post) => {
+        if (!ctx.user)
+          return { ...post, post: { ...post.post, isLikedByUser: false } }
+        const isLikedByUser = post.post.postLikes.some(
+          (like) => like.userId === ctx.user?.id
+        )
+        return { ...post, post: { ...post.post, isLikedByUser } }
+      })
 
       let nextCursor: typeof cursor | undefined = undefined
 
@@ -98,27 +106,24 @@ export const postRouter = router({
       if (!postId) throw new TRPCError({ code: "BAD_REQUEST" })
 
       let post: PostWithRelations | null
-      
-        post = await ctx.prisma.post.findFirst({
-          where: {
-            id: postId,
-          },
-          include: {
-            _count: {
-              select: {
-                comments: true,
-                postLikes: true,
-              },
-            },
-            postLikes: true,
-            media: true,
-          },
-        })
 
-        if (!post) throw new TRPCError({ code: "NOT_FOUND" })
-      
-  
-      
+      post = await ctx.prisma.post.findFirst({
+        where: {
+          id: postId,
+        },
+        include: {
+          _count: {
+            select: {
+              comments: true,
+              postLikes: true,
+            },
+          },
+          postLikes: true,
+          media: true,
+        },
+      })
+
+      if (!post) throw new TRPCError({ code: "NOT_FOUND" })
 
       const postWithUser = (await addUserDataToPosts([post]))[0]
 
@@ -170,7 +175,15 @@ export const postRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
       }
 
-      const posts = await addUserDataToPosts(rawPosts)
+      let posts = await addUserDataToPosts(rawPosts)
+      posts = posts.map((post) => {
+        if (!ctx.user)
+          return { ...post, post: { ...post.post, isLikedByUser: false } }
+        const isLikedByUser = post.post.postLikes.some(
+          (like) => like.userId === ctx.user?.id
+        )
+        return { ...post, post: { ...post.post, isLikedByUser } }
+      })
 
       let nextCursor: typeof cursor | undefined = undefined
 

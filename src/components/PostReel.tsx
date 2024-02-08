@@ -25,6 +25,8 @@ const PostReel = () => {
     }
   )
 
+  console.log("Posts: ", data)
+
   const { ref, inView, entry } = useInView()
 
   useEffect(() => {
@@ -82,6 +84,7 @@ const PostReel = () => {
               }
               media={post!.post.media}
               postLikes={post!.post.postLikes}
+              isLikedByUser={post.post.isLikedByUser ?? false}
               userId={post.user.id}
             />
           )

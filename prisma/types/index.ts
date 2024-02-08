@@ -2,7 +2,9 @@ import { Prisma } from "@prisma/client"
 
 export type PostWithRelations = Prisma.PostGetPayload<{
   include: { _count: {select: {comments: true, postLikes: true}}; postLikes: true; media: true }
-}>
+}> & {
+  isLikedByUser?: boolean
+}
 
 export type ParentCommentsWithReplyCount = Prisma.CommentGetPayload<{
   include: {_count: {select: {replies: true}}, commentLikes: true}
