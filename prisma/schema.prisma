@@ -10,6 +10,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model UserCoverImages{
+  id        String @id @default(uuid()) @db.Uuid
+  url       String
+  userId    String @map("user_id") //clerk userId
+  isActive  Boolean @map("is_active") @db.Boolean
+
+  @@map("user_cover_images")
+}
+
 model Post {
   id        String   @id @default(uuid()) @db.Uuid
   caption   String?

@@ -66,7 +66,6 @@ const getSignedUrls = async (
   })
 
   let signedUrls = []
-  // let mediaResults = []
   for (let i = 0; i < fileTypes.length; i++) {
     const putObjectCommand = new PutObjectCommand({
       Bucket: process.env.AWS_BUCKET_NAME,
@@ -91,16 +90,6 @@ const getSignedUrls = async (
         message: "Error retrieving signed urls. Please try again later.",
       })
     }
-
-    //Attach media to user later
-    // const mediaResult = await prisma.media.create({
-    //   data: {
-    //     userId: ctx.user.id,
-    //     type: fileTypes[i].startsWith("image") ? "image" : "video",
-    //     url: signedUrl.split("?")[0] //everything before the query params
-    //   }
-    // })
-    // mediaResults.push(mediaResult)
   }
 
   return { success: true, signedUrls }

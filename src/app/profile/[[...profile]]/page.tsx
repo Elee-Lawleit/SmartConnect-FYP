@@ -5,15 +5,30 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { trpc } from "@/server/trpc/client"
 import Post from "@/components/Post"
 import { useInView } from "react-intersection-observer"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { Loader2 } from "lucide-react"
 import useNFTMarketplace from "@/web3/useMarketplace"
 import NFTCard from "@/components/marketpalce/NFTCard"
+import { Button } from "@/components/ui/button"
+import getSignedUrls from "@/app/actions/getSignedUrls"
+import { toast } from "@/components/ui/use-toast"
 
 const UserProfilePage = () => {
   const { user } = useUser()
+
+  const coverImageElement = useRef<HTMLInputElement | null>(null)
+
+    const {
+      data: coverImageResponse,
+      isLoading: loadingCoverImage,
+      isError: coverImageError,
+    } = trpc.profileRouter.fetchCoverImage.useQuery({ userId: "user_2bUdXgzXjCD3F0A1GyuAl59eAsN" },)
+
+  const { mutate: updateCoverImage, isLoading: updatingCoverImage } =
+    trpc.profileRouter.updateCoverImage.useMutation()
+
   const {
     data,
     isLoading,
@@ -28,7 +43,7 @@ const UserProfilePage = () => {
       enabled: user?.id ? true : false,
     }
   )
-  const {ownedNfts} = useNFTMarketplace()
+  const { ownedNfts } = useNFTMarketplace()
 
   const { ref, inView, entry } = useInView()
 
@@ -37,6 +52,67 @@ const UserProfilePage = () => {
       fetchNextPage()
     }
   }, [fetchNextPage, inView])
+
+  const handleCoverImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (!event.target.files || !event.target.files[0] || !user) {
+      return
+    }
+    const selectedFile = event.target.files[0]
+
+    const checksum = await computeSHA256(selectedFile)
+
+    const response = await getSignedUrls(
+      [selectedFile.type],
+      [selectedFile.size],
+      [checksum],
+      user.id
+    )
+
+    if (response) {
+      const [first] = response.signedUrls
+
+      const res = await fetch(first, {
+        method: "PUT",
+        headers: {
+          "Content-Type": selectedFile.type,
+        },
+        body: selectedFile,
+      })
+      const url = first.split("?")[0]
+      updateCoverImage(
+        { imageUrl: url },
+        {
+          onError: () => {
+            toast({
+              variant: "destructive",
+              title: "Uh oh! Something went wrong",
+              description: `An internal server error occurred. Please try again later.`,
+            })
+          },
+          onSuccess: () => {
+            toast({
+              title: "Success.",
+              description: "Cover image updated successfully.",
+            })
+          },
+        }
+      )
+    }
+  }
+
+  //MOVE THIS TO A SEPARATE FILE LATER AND IMPORT FROM THERE "helpers.ts"
+  const computeSHA256 = async (file: File) => {
+    //do this for media array
+    const buffer = await file.arrayBuffer()
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer)
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const hashHex = hashArray
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("")
+    return hashHex
+  }
 
   if (!user) {
     return (
@@ -79,6 +155,8 @@ const UserProfilePage = () => {
       </div>
     )
   }
+
+  console.log(coverImageResponse)
   return (
     <div>
       <header className="flex flex-col gap-1">
@@ -87,13 +165,29 @@ const UserProfilePage = () => {
           <img
             className="w-full h-full object-cover rounded-md"
             height="144"
-            src="/placeholder.svg"
+            src={coverImageResponse?.coverImage.url ?? "/placeholder.svg"}
             style={{
               aspectRatio: "1024/144",
               objectFit: "cover",
             }}
             width="1024"
           />
+          <div>
+            <Button
+              className="absolute z-50 bottom-32 left-10 bg-black opacity-50 rounded-md p-1 hover:opacity-95"
+              onClick={() => coverImageElement.current?.click()}
+              disabled={updatingCoverImage}
+            >
+              {updatingCoverImage ? "updating..." : "Edit Cover Image"}
+            </Button>
+            <input
+              ref={coverImageElement}
+              className="hidden"
+              type="file"
+              accept="image/*"
+              onChange={handleCoverImageUpload}
+            />
+          </div>
           <div className="flex items-center gap-6 justify-center">
             <img
               className="w-20 h-20 rounded-full"
@@ -235,7 +329,9 @@ const UserProfilePage = () => {
                   </Skeleton>
                 ))}
               </div>
-            ) : ownedNfts.length === 0 ? <div>no owned nfts</div>  : (
+            ) : ownedNfts.length === 0 ? (
+              <div>no owned nfts</div>
+            ) : (
               ownedNfts?.map((nft) => <NFTCard key={nft.id} nft={nft} />)
             )}
           </TabsContent>
