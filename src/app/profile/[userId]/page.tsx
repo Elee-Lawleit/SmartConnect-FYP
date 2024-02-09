@@ -1,6 +1,6 @@
 "use client"
 import Navbar from "@/components/Navbar"
-import { UserProfile, useUser } from "@clerk/nextjs"
+import { UserProfile, useClerk, useUser } from "@clerk/nextjs"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { trpc } from "@/server/trpc/client"
 import Post from "@/components/Post"
@@ -15,16 +15,28 @@ import { Button } from "@/components/ui/button"
 import getSignedUrls from "@/app/actions/getSignedUrls"
 import { toast } from "@/components/ui/use-toast"
 
-const UserProfilePage = () => {
-  const { user } = useUser()
+interface PageProps {
+  params: {
+    userId: string
+  }
+}
+
+const UserProfilePage = ({ params: { userId } }: PageProps) => {
+  const { user } = useUser()  
 
   const coverImageElement = useRef<HTMLInputElement | null>(null)
 
-    const {
-      data: coverImageResponse,
-      isLoading: loadingCoverImage,
-      isError: coverImageError,
-    } = trpc.profileRouter.fetchCoverImage.useQuery({ userId: "user_2bUdXgzXjCD3F0A1GyuAl59eAsN" },)
+
+  const{data: userFromBackend} = trpc.profileRouter.fetchUserInfo.useQuery({userId})
+  console.log("data: ", userFromBackend)
+
+  const {
+    data: coverImageResponse,
+    isLoading: loadingCoverImage,
+    isError: coverImageError,
+  } = trpc.profileRouter.fetchCoverImage.useQuery({
+    userId,
+  })
 
   const { mutate: updateCoverImage, isLoading: updatingCoverImage } =
     trpc.profileRouter.updateCoverImage.useMutation()
@@ -37,10 +49,10 @@ const UserProfilePage = () => {
     isFetchingNextPage,
     hasNextPage,
   } = trpc.postRouter.fetchUserPosts.useInfiniteQuery(
-    { userId: user?.id as string, limit: 2 },
+    { userId, limit: 2 },
     {
       getNextPageParam: (lastPageResponse) => lastPageResponse.nextCursor,
-      enabled: user?.id ? true : false,
+      enabled: userId ? true : false,
     }
   )
   const { ownedNfts } = useNFTMarketplace()
@@ -56,7 +68,7 @@ const UserProfilePage = () => {
   const handleCoverImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    if (!event.target.files || !event.target.files[0] || !user) {
+    if (!event.target.files || !event.target.files[0]) {
       return
     }
     const selectedFile = event.target.files[0]
@@ -67,7 +79,7 @@ const UserProfilePage = () => {
       [selectedFile.type],
       [selectedFile.size],
       [checksum],
-      user.id
+      userId
     )
 
     if (response) {
@@ -156,7 +168,6 @@ const UserProfilePage = () => {
     )
   }
 
-  console.log(coverImageResponse)
   return (
     <div>
       <header className="flex flex-col gap-1">
@@ -172,27 +183,29 @@ const UserProfilePage = () => {
             }}
             width="1024"
           />
-          <div>
-            <Button
-              className="absolute z-50 bottom-32 left-10 bg-black opacity-50 rounded-md p-1 hover:opacity-95"
-              onClick={() => coverImageElement.current?.click()}
-              disabled={updatingCoverImage}
-            >
-              {updatingCoverImage ? "updating..." : "Edit Cover Image"}
-            </Button>
-            <input
-              ref={coverImageElement}
-              className="hidden"
-              type="file"
-              accept="image/*"
-              onChange={handleCoverImageUpload}
-            />
-          </div>
+          {userId === user.id && (
+            <div>
+              <Button
+                className="absolute z-50 bottom-32 left-10 bg-black opacity-50 rounded-md p-1 hover:opacity-95"
+                onClick={() => coverImageElement.current?.click()}
+                disabled={updatingCoverImage}
+              >
+                {updatingCoverImage ? "updating..." : "Edit Cover Image"}
+              </Button>
+              <input
+                ref={coverImageElement}
+                className="hidden"
+                type="file"
+                accept="image/*"
+                onChange={handleCoverImageUpload}
+              />
+            </div>
+          )}
           <div className="flex items-center gap-6 justify-center">
             <img
               className="w-20 h-20 rounded-full"
               height="80"
-              src={user?.imageUrl}
+              src={userFromBackend?.user.imageUrl}
               style={{
                 aspectRatio: "80/80",
                 objectFit: "cover",
@@ -201,12 +214,14 @@ const UserProfilePage = () => {
             />
             <div className="flex flex-col ">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white">
-                {user?.fullName ??
-                  user?.emailAddresses[0].emailAddress.split("@")[0]}
+                {userFromBackend?.user.fullname ??
+                  userFromBackend?.user.emailAddresses[0].emailAddress.split(
+                    "@"
+                  )[0]}
               </h2>
-              {user?.username && (
+              {userFromBackend?.user.username && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  @{user?.username}
+                  @{userFromBackend?.user.username}
                 </p>
               )}
               <p className="text-gray-600 dark:text-gray-400 mt-4">
@@ -214,9 +229,6 @@ const UserProfilePage = () => {
                 nisl eros, pulvinar facilisis justo mollis, auctor consequat
                 urna.
               </p>
-              {/* <button className="bg-blue-500 text-white rounded-md px-4 py-2 mt-4">
-                Edit Profile
-              </button> */}
             </div>
           </div>
         </div>
@@ -282,6 +294,7 @@ const UserProfilePage = () => {
                       media={post!.post.media}
                       postLikes={post!.post.postLikes}
                       userId={post.user.id}
+                      isLikedByUser={post.post.isLikedByUser ?? false}
                     />
                   )
                 })

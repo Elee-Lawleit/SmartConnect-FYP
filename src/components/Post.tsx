@@ -129,7 +129,7 @@ const Post = ({
     setOptimisticLikeStatus((prev) => !prev)
     if (
       postLikes &&
-      postLikes.filter((postLike: any) => postLike.userId === user?.id)
+      postLikes.filter((postLike) => postLike.userId === user?.id)
         .length !== 0
     ) {
       setOptimisticLikeCount((prev) => prev - 1)
@@ -303,7 +303,7 @@ const Post = ({
               <CarouselContent>
                 {" "}
                 {/* this should adjust height based on CaroselItem */}
-                {media.map((media: any, index: number) => {
+                {media.map((media, index: number) => {
                   return (
                     <CarouselItem key={index} className="align-middle">
                       {media.type === "image" ? (

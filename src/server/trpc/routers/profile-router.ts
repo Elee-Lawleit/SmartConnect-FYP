@@ -1,8 +1,19 @@
 import { z } from "zod"
 import { privateProcedure, publicProcedure, router } from "../trpc"
 import { TRPCError } from "@trpc/server"
+import clerk from "@clerk/clerk-sdk-node"
+import { filterUserForClient } from "../../helpers/filterUserForClient"
 
 export const profileRouter = router({
+
+  fetchUserInfo: publicProcedure.input(z.object({
+    userId: z.string()
+  })).query(async({ctx, input: {userId}})=>{
+    const user = await clerk.users.getUser(userId)
+    const filteredUser = filterUserForClient(user)
+    return {success: true, user: filteredUser}
+  }),
+
   fetchCoverImage: publicProcedure.input(z.object({
     userId: z.string()
   })).query(async({input: {userId}, ctx})=>{
