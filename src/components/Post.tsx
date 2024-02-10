@@ -39,6 +39,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import Link from "next/link"
 
 type MediaWithStringDate = Omit<Media, "createdAt"> & {
   createdAt: string // Modified type
@@ -190,15 +191,18 @@ const Post = ({
         {/* <!-- User Info with Three-Dot Menu --> */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <img
-              src={userImageUrl}
-              alt="User Avatar"
-              className="w-8 h-8 rounded-full"
-            />
-
+            <Link href={`/profile/${userId}`} className="hover:no-underline">
+              <img
+                src={userImageUrl}
+                alt="User Avatar"
+                className="w-8 h-8 rounded-full"
+              />
+            </Link>
             <div>
-              <p className="text-gray-800 font-semibold">{userDisplayName}</p>
-              <p className="text-gray-500 text-sm">
+              <Link href={`/profile/${userId}`} className="hover:underline underline-offset-2">
+                <p className="text-gray-800 font-semibold">{userDisplayName}</p>
+              </Link>
+              <p className="text-gray-500 text-sm hover:underline-none">
                 {formatRelativeTime(createdAt)}
               </p>
             </div>
