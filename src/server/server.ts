@@ -7,59 +7,57 @@ import type { WebhookEvent } from "@clerk/clerk-sdk-node"
 import Cookies from "cookies"
 import clerk from "@clerk/clerk-sdk-node"
 import { PrismaClient } from "@prisma/client"
-import {applyWSSHandler} from "@trpc/server/adapters/ws"
+import {
+  CreateWSSContextFnOptions,
+  applyWSSHandler,
+} from "@trpc/server/adapters/ws"
 import ws from "ws"
-import { NodeHTTPCreateContextFnOptions } from "@trpc/server/adapters/node-http"
-import { IncomingMessage } from "http"
 
 const app = express()
 const prisma = new PrismaClient()
 
 const PORT = Number(process.env.PORT) || 3000
 
+function isExpressRequest(
+  options: trpcExpress.CreateExpressContextOptions | CreateWSSContextFnOptions
+): options is trpcExpress.CreateExpressContextOptions {
+  return (options as trpcExpress.CreateExpressContextOptions).req !== undefined
+}
+
 //goes into createExpressMiddlware for trpc
-const createContext = async ({
-  req,
-  res,
-}: trpcExpress.CreateExpressContextOptions ) => {
-  const cookies = new Cookies(req, res)
-  const sessionToken = cookies.get("__session") as string
-  let user = null
+const createContext = async (
+  options: trpcExpress.CreateExpressContextOptions | CreateWSSContextFnOptions
+) => {
+  if (isExpressRequest(options)) {
+    const cookies = new Cookies(options.req, options.res)
+    const sessionToken = cookies.get("__session") as string
+    let user = null
 
-  //okay, so I am hopeful that if the user can't be found, clerk will return null and not throw an error
-  try {
-    const decodeInfo = await clerk.verifyToken(sessionToken)
-    const userId = decodeInfo.sub
-    user = await clerk.users.getUser(userId)
+    //okay, so I am hopeful that if the user can't be found, clerk will return null and not throw an error
+    try {
+      const decodeInfo = await clerk.verifyToken(sessionToken)
+      const userId = decodeInfo.sub
+      user = await clerk.users.getUser(userId)
 
-    //just making it's not anything other than null
-    if(!user) user = null
-  } catch (error) {
-    console.log("Error: ", error)
-    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      //just making it's not anything other than null
+      if (!user) user = null
+    } catch (error) {
+      console.log("Error: ", error)
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+    }
+
+    return {
+      req: options.req,
+      res: options.res,
+      user,
+      prisma,
+    }
   }
-
-  return {
-    req,
-    res,
-    user,
-    prisma
-  }
+  return { req: options.req, res: options.res, user: null, prisma }
 }
 
 
-
-const createWSContext = (opts: NodeHTTPCreateContextFnOptions<IncomingMessage, WebSocket>) => {
-  return {
-    req: opts.req,
-    res: opts.res,
-    user: null,
-    prisma: prisma
-  }
-}
-
-export type ExpressContext = inferAsyncReturnType<typeof createContext>
-export type WSContext = inferAsyncReturnType<typeof createWSContext>
+export type Context = Awaited<ReturnType<typeof createContext>>
 
 const start = () => {
   app.use("/api/clerk", (req, res) => {
@@ -98,7 +96,7 @@ const start = () => {
     applyWSSHandler({
       wss: new ws.Server({ server: server }),
       router: appRouter,
-      createContext: createWSContext
+      createContext,
     })
   })
 }
