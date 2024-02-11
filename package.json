@@ -54,6 +54,7 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.8.0",
     "web3modal": "1.9.5",
+    "ws": "^8.16.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
@@ -64,6 +65,7 @@
     "@types/react": "^18",
     "@types/react-blockies": "^1.4.4",
     "@types/react-dom": "^18",
+    "@types/ws": "^8.5.10",
     "apollo": "^2.34.0",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",

@@ -7,6 +7,10 @@ import type { WebhookEvent } from "@clerk/clerk-sdk-node"
 import Cookies from "cookies"
 import clerk from "@clerk/clerk-sdk-node"
 import { PrismaClient } from "@prisma/client"
+import {applyWSSHandler} from "@trpc/server/adapters/ws"
+import ws from "ws"
+import { NodeHTTPCreateContextFnOptions } from "@trpc/server/adapters/node-http"
+import { IncomingMessage } from "http"
 
 const app = express()
 const prisma = new PrismaClient()
@@ -17,7 +21,7 @@ const PORT = Number(process.env.PORT) || 3000
 const createContext = async ({
   req,
   res,
-}: trpcExpress.CreateExpressContextOptions) => {
+}: trpcExpress.CreateExpressContextOptions ) => {
   const cookies = new Cookies(req, res)
   const sessionToken = cookies.get("__session") as string
   let user = null
@@ -43,7 +47,19 @@ const createContext = async ({
   }
 }
 
+
+
+const createWSContext = (opts: NodeHTTPCreateContextFnOptions<IncomingMessage, WebSocket>) => {
+  return {
+    req: opts.req,
+    res: opts.res,
+    user: null,
+    prisma: prisma
+  }
+}
+
 export type ExpressContext = inferAsyncReturnType<typeof createContext>
+export type WSContext = inferAsyncReturnType<typeof createWSContext>
 
 const start = () => {
   app.use("/api/clerk", (req, res) => {
@@ -75,8 +91,14 @@ const start = () => {
 
   //prepare the nextjs app and then start the server
   nextApp.prepare().then(() => {
-    app.listen(PORT, async () => {
+    const server = app.listen(PORT, async () => {
       console.log(`Server started on port ${PORT}`)
+    })
+
+    applyWSSHandler({
+      wss: new ws.Server({ server: server }),
+      router: appRouter,
+      createContext: createWSContext
     })
   })
 }

@@ -191,12 +191,13 @@ const Post = ({
         {/* <!-- User Info with Three-Dot Menu --> */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <Link href={`/profile/${userId}`} className="hover:no-underline">
+            <Link href={`/profile/${userId}`} className="hover:no-underline relative">
               <img
                 src={userImageUrl}
                 alt="User Avatar"
                 className="w-8 h-8 rounded-full"
               />
+              <div className="absolute bg-transparent hover:bg-gray-200 inset-0 rounded-full opacity-20" />
             </Link>
             <div>
               <Link href={`/profile/${userId}`} className="hover:underline underline-offset-2">
