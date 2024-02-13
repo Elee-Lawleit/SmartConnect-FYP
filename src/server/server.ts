@@ -12,28 +12,29 @@ import {
   applyWSSHandler,
 } from "@trpc/server/adapters/ws"
 import ws from "ws"
+import {  NodeHTTPCreateContextFnOptions } from "@trpc/server/adapters/node-http"
+import { IncomingMessage } from "http"
+import { WebSocket } from "ws"
 
 const app = express()
 const prisma = new PrismaClient()
 
 const PORT = Number(process.env.PORT) || 3000
 
-function isExpressRequest(
-  options: trpcExpress.CreateExpressContextOptions | CreateWSSContextFnOptions
-): options is trpcExpress.CreateExpressContextOptions {
-  return (options as trpcExpress.CreateExpressContextOptions).req !== undefined
-}
-
 //goes into createExpressMiddlware for trpc
 const createContext = async (
-  options: trpcExpress.CreateExpressContextOptions | CreateWSSContextFnOptions
+  options: trpcExpress.CreateExpressContextOptions | NodeHTTPCreateContextFnOptions<IncomingMessage, WebSocket>
 ) => {
-  if (isExpressRequest(options)) {
-    const cookies = new Cookies(options.req, options.res)
-    const sessionToken = cookies.get("__session") as string
-    let user = null
+  let cookies
+  let sessionToken: string
+  let user = null
+  if (!("upgrade" in options.req.headers)) {
+    cookies = new Cookies(
+      options.req as express.Request,
+      options.res as express.Response
+    ) //--> this is problmatic
+    sessionToken = cookies.get("__session") as string
 
-    //okay, so I am hopeful that if the user can't be found, clerk will return null and not throw an error
     try {
       const decodeInfo = await clerk.verifyToken(sessionToken)
       const userId = decodeInfo.sub
@@ -45,7 +46,6 @@ const createContext = async (
       console.log("Error: ", error)
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
     }
-
     return {
       req: options.req,
       res: options.res,
@@ -53,11 +53,14 @@ const createContext = async (
       prisma,
     }
   }
-  return { req: options.req, res: options.res, user: null, prisma }
+  //if it's a web socket request
+  return {
+    // req: options.req,
+    prisma,
+  }
 }
 
-
-export type Context = Awaited<ReturnType<typeof createContext>>
+export type Context = inferAsyncReturnType<typeof createContext>
 
 const start = () => {
   app.use("/api/clerk", (req, res) => {
@@ -94,7 +97,9 @@ const start = () => {
     })
 
     applyWSSHandler({
-      wss: new ws.Server({ server: server }),
+      wss: new ws.Server({ server: server }).on("connection", (ws) =>
+        console.log("Someone just connected to web socket")
+      ),
       router: appRouter,
       createContext,
     })

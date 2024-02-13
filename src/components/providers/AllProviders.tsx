@@ -4,7 +4,7 @@
 import { PropsWithChildren, useState, useEffect } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { trpc } from "@/server/trpc/client"
-import { httpBatchLink } from "@trpc/client"
+import { createWSClient, httpBatchLink, wsLink } from "@trpc/client"
 import { ClerkProvider, useUser } from "@clerk/nextjs"
 import { ApolloProvider, ApolloClient, InMemoryCache } from "@apollo/client"
 import { Toaster } from "@/components/ui/toaster"
@@ -23,6 +23,11 @@ const Providers = ({ children }: PropsWithChildren) => {
               credentials: "include",
             })
           },
+        }),
+        wsLink({
+          client: createWSClient({
+            url: "ws://localhost:3000",
+          }),
         }),
       ],
     })

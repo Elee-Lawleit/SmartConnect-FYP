@@ -1,12 +1,14 @@
 import { z } from "zod"
 import { privateProcedure, publicProcedure, router } from "../trpc"
 import { TRPCError } from "@trpc/server"
-import { Comment, Prisma, PrismaClient } from "@prisma/client"
+import { Comment } from "@prisma/client"
 import clerk from "@clerk/clerk-sdk-node"
 import {
   ParentCommentsWithReplyCount,
   ReplyComments,
 } from "../../../../prisma/types"
+import { EventEmitter } from "events"
+import { observable } from "@trpc/server/observable"
 
 export const addUserDataToComments = async (comments: Comment[]) => {
   const userIds = comments.map((comment) => comment.userId)
@@ -29,7 +31,23 @@ export const addUserDataToComments = async (comments: Comment[]) => {
   })
 }
 
+const eventEmitter = new EventEmitter()
+
 export const commentRouter = router({
+
+  onCreated: publicProcedure.subscription(()=>{
+    return observable<Comment>((emit)=>{
+      const onCreated = (data:Comment)=>{
+        emit.next(data)
+      }
+      console.log("Event being emitted!!!!")
+      eventEmitter.on("onCreated", onCreated)
+      return ()=>{
+        eventEmitter.off("onCreated", onCreated)
+      }
+    })
+  })
+  ,
   fetchAllParentComments: publicProcedure
     .input(
       z.object({
@@ -185,6 +203,8 @@ export const commentRouter = router({
       } catch (error) {
         console.log("🔴 Prisma Error: ", error)
       }
+
+      eventEmitter.emit("onCreated", comment)
 
       return { success: true, comment }
     }),
