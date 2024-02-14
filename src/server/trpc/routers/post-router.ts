@@ -31,7 +31,9 @@ const addUserDataToPosts = async (posts: PostWithRelations[]) => {
   })
 }
 export const postRouter = router({
-  fetchAllPosts: publicProcedure
+  //just gonna make it private for now
+  //might adjust to be public when I change other things as well
+  fetchAllPosts: privateProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(50).nullish(),

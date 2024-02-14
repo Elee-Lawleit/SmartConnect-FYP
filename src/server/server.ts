@@ -8,11 +8,10 @@ import Cookies from "cookies"
 import clerk from "@clerk/clerk-sdk-node"
 import { PrismaClient } from "@prisma/client"
 import {
-  CreateWSSContextFnOptions,
   applyWSSHandler,
 } from "@trpc/server/adapters/ws"
 import ws from "ws"
-import {  NodeHTTPCreateContextFnOptions } from "@trpc/server/adapters/node-http"
+import { NodeHTTPCreateContextFnOptions } from "@trpc/server/adapters/node-http"
 import { IncomingMessage } from "http"
 import { WebSocket } from "ws"
 
@@ -25,37 +24,10 @@ const PORT = Number(process.env.PORT) || 3000
 const createContext = async (
   options: trpcExpress.CreateExpressContextOptions | NodeHTTPCreateContextFnOptions<IncomingMessage, WebSocket>
 ) => {
-  let cookies
-  let sessionToken: string
-  let user = null
-  if (!("upgrade" in options.req.headers)) {
-    cookies = new Cookies(
-      options.req as express.Request,
-      options.res as express.Response
-    ) //--> this is problmatic
-    sessionToken = cookies.get("__session") as string
 
-    try {
-      const decodeInfo = await clerk.verifyToken(sessionToken)
-      const userId = decodeInfo.sub
-      user = await clerk.users.getUser(userId)
-
-      //just making it's not anything other than null
-      if (!user) user = null
-    } catch (error) {
-      console.log("Error: ", error)
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-    }
-    return {
-      req: options.req,
-      res: options.res,
-      user,
-      prisma,
-    }
-  }
-  //if it's a web socket request
   return {
-    // req: options.req,
+    req: options.req,
+    res: options.res ?? null,
     prisma,
   }
 }
@@ -96,12 +68,29 @@ const start = () => {
       console.log(`Server started on port ${PORT}`)
     })
 
-    applyWSSHandler({
-      wss: new ws.Server({ server: server }).on("connection", (ws) =>
-        console.log("Someone just connected to web socket")
-      ),
+    const wss = new ws.Server({ server })
+
+    const handler = applyWSSHandler({
+      wss,
       router: appRouter,
       createContext,
+    })
+
+    //about WEB SOCKETS
+    // it's not working because or some weird thing inside nextjs' base-server.js file
+    // change line number 460 in next/base-server.js provided below
+    // const origSetHeader = _res.setHeader.bind(_res); --> from this
+    // const origSetHeader = _res && typeof _res.setHeader === "function" ? _res.setHeader.bind(_res) : null --> to this
+
+    wss.on("connection", () => {
+      console.log("client connected!")
+      console.log("Size: ", wss.clients.size)
+    })
+
+    process.on("SIGTERM", () => {
+      console.log("SIGTERM")
+      handler.broadcastReconnectNotification()
+      wss.close()
     })
   })
 }

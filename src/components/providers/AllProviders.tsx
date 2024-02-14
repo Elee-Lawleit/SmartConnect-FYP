@@ -4,7 +4,7 @@
 import { PropsWithChildren, useState, useEffect } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { trpc } from "@/server/trpc/client"
-import { createWSClient, httpBatchLink, wsLink } from "@trpc/client"
+import { createWSClient, httpBatchLink, splitLink, wsLink } from "@trpc/client"
 import { ClerkProvider, useUser } from "@clerk/nextjs"
 import { ApolloProvider, ApolloClient, InMemoryCache } from "@apollo/client"
 import { Toaster } from "@/components/ui/toaster"
@@ -15,18 +15,21 @@ const Providers = ({ children }: PropsWithChildren) => {
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
-        httpBatchLink({
-          url: `${process.env.NEXT_PUBLIC_SERVER_URL}/api/trpc`,
-          fetch(url, options) {
-            return fetch(url, {
-              ...options,
-              credentials: "include",
-            })
-          },
-        }),
-        wsLink({
-          client: createWSClient({
-            url: "ws://localhost:3000",
+        splitLink({
+          condition: (reqType) => reqType.type === "subscription",
+          true: wsLink({
+            client: createWSClient({
+              url: `${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL}/api/trpc`,
+            }),
+          }),
+          false: httpBatchLink({
+            url: `${process.env.NEXT_PUBLIC_SERVER_URL}/api/trpc`,
+            fetch(url, options) {
+              return fetch(url, {
+                ...options,
+                credentials: "include",
+              })
+            },
           }),
         }),
       ],
@@ -57,15 +60,14 @@ const Providers = ({ children }: PropsWithChildren) => {
 
 export default Providers
 
-
 //TODO: change this hook and make it better
-// or just simply remove metamask authentication from clerk. simple, right? 
+// or just simply remove metamask authentication from clerk. simple, right?
 // const WalletEventChange = () => {
 //   const { user, isSignedIn } = useUser()
 
 //   useEffect(() => {
 //     async function checkWalletConnection() {
-      
+
 //       if (window.ethereum && user && isSignedIn) {
 //         const accounts = await window.ethereum.request({
 //           method: "eth_requestAccounts",
