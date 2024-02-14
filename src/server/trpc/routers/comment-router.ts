@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { privateProcedure, publicProcedure, router } from "../trpc"
+import { privateProcedure, publicProcedure, router, subscriptionProcedure } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import { Comment } from "@prisma/client"
 import clerk from "@clerk/clerk-sdk-node"
@@ -35,7 +35,7 @@ const eventEmitter = new EventEmitter()
 
 export const commentRouter = router({
 
-  onCreated: publicProcedure.subscription(()=>{
+  onCreated: subscriptionProcedure.subscription(()=>{
     return observable<Comment>((emit)=>{
       const onCreated = (data:Comment)=>{
         emit.next(data)

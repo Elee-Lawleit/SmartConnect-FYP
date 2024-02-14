@@ -83,8 +83,8 @@ const start = () => {
     // const origSetHeader = _res && typeof _res.setHeader === "function" ? _res.setHeader.bind(_res) : null --> to this
 
     wss.on("connection", () => {
-      console.log("client connected!")
-      console.log("Size: ", wss.clients.size)
+      // console.log("client connected!")
+      // console.log("Size: ", wss.clients.size)
     })
 
     process.on("SIGTERM", () => {
