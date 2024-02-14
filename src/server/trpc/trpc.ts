@@ -32,40 +32,6 @@ const authMiddleware = middleware(async ({ ctx, next }) => {
   })
 })
 
-interface ParsedCookies {
-  [cookieName: string]: string
-}
-
-
-const subscriptionMiddleware = middleware(async ({ ctx, next }) => {
-  const cookieHeader = ctx.req.headers.cookie
-  const cookiePairs = cookieHeader?.split(";")
-  const cookies: ParsedCookies = {}
-
-  if (cookiePairs) {
-    for (const cookie of cookiePairs) {
-      const [name, value] = cookie.trim().split("=")
-      const decodedValue = decodeURIComponent(value)
-      cookies[name] = decodedValue
-    }
-  }
-
-  const sessionToken = cookies["__session"]
-  const decodeInfo = await clerk.verifyToken(sessionToken)
-  const userId = decodeInfo.sub
-  const user = await clerk.users.getUser(userId)
-
-  const users = {}
-
-  if (!user) {
-    console.log("No user found")
-    return next()
-  }
-
-  return next()
-})
-
 export const router = t.router
 export const publicProcedure = t.procedure
 export const privateProcedure = t.procedure.use(authMiddleware)
-export const subscriptionProcedure = t.procedure.use(subscriptionMiddleware)

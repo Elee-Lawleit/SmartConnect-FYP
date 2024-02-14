@@ -19,7 +19,7 @@ const Providers = ({ children }: PropsWithChildren) => {
           condition: (reqType) => reqType.type === "subscription",
           true: wsLink({
             client: createWSClient({
-              url: `${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL}/`,
+              url: `${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL}/api/trpc`,
             }),
           }),
           false: httpBatchLink({

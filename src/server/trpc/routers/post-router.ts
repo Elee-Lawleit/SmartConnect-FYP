@@ -5,6 +5,7 @@ import * as z from "zod"
 import clerk from "@clerk/clerk-sdk-node"
 import { PostWithRelations } from "../../../../prisma/types"
 import { filterUserForClient } from "../../../server/helpers/filterUserForClient"
+import { observable } from "@trpc/server/observable"
 
 const addUserDataToPosts = async (posts: PostWithRelations[]) => {
   const userIds = posts.map((post) => post.userId)
@@ -31,6 +32,36 @@ const addUserDataToPosts = async (posts: PostWithRelations[]) => {
   })
 }
 export const postRouter = router({
+  onCreated: publicProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+      })
+    )
+    .subscription(({ ctx, input }) => {
+      const { userId } = input
+
+      return observable<PostWithRelations>((emit) => {
+        const sendPostCreatedEvent = async (post: PostWithRelations) => {
+          const friends = await ctx.prisma.friend.findMany({
+            where: {
+              userId: post.userId,
+            },
+          })
+
+          if (friends.some((friend) => friend.friendId === userId)) {
+            emit.next(post)
+          }
+        }
+
+        ctx.ee.on("onPostCreated", sendPostCreatedEvent)
+
+        return () => {
+          ctx.ee.off("onPostCreated", sendPostCreatedEvent)
+        }
+      })
+    }),
+
   //just gonna make it private for now
   //might adjust to be public when I change other things as well
   fetchAllPosts: privateProcedure
@@ -231,6 +262,8 @@ export const postRouter = router({
         console.log("🔴 Prisma Error: ", error)
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
       }
+
+      ctx.ee.emit("onPostCreated", post)
 
       return { success: true, post }
     }),

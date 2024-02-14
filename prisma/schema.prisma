@@ -10,13 +10,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model UserCoverImages{
-  id        String @id @default(uuid()) @db.Uuid
-  url       String
-  userId    String @map("user_id") //clerk userId
-  isActive  Boolean @map("is_active") @db.Boolean
+model UserCoverImages {
+  id       String  @id @default(uuid()) @db.Uuid
+  url      String
+  userId   String  @map("user_id") //clerk userId
+  isActive Boolean @map("is_active") @db.Boolean
 
   @@map("user_cover_images")
+}
+
+model Friend {
+  userId    String   @map("user_id")
+  friendId  String   @map("friend_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@id([userId, friendId])
+  @@map("friend")
 }
 
 model Post {
@@ -27,10 +36,10 @@ model Post {
   views     Int      @default(0) // will use this when I implement the intersection observer API
   userId    String   @map("user_id")
 
-  comments  Comment[]
-  media     Media[]
-  postLikes PostLikes[]
-  postViews PostViews[]
+  comments   Comment[]
+  media      Media[]
+  postLikes  PostLikes[]
+  postViews  PostViews[]
   savedPosts SavedPosts[]
 
   @@map("post")
@@ -137,6 +146,7 @@ model EventUsers {
 enum EventType {
   ONLINE
   ONSITE
+
   @@map("event_type")
 }
 
