@@ -45,13 +45,19 @@ export const postRouter = router({
         const sendPostCreatedEvent = async (post: PostWithRelations) => {
           const friends = await ctx.prisma.friend.findMany({
             where: {
-              userId: post.userId,
+              OR: [{ userId: post.userId }, { friendId: post.userId }],
             },
           })
 
-          if (friends.some((friend) => friend.friendId === userId)) {
-            emit.next(post)
-          }
+          friends.forEach((friend) => {
+            //sending to every friend other than the creator
+            if (
+              (friend.friendId === userId || friend.userId === userId) &&
+              post.userId !== userId
+            ) {
+              emit.next(post)
+            }
+          })
         }
 
         ctx.ee.on("onPostCreated", sendPostCreatedEvent)
