@@ -9,6 +9,7 @@ import { ClerkProvider, useUser } from "@clerk/nextjs"
 import { ApolloProvider, ApolloClient, InMemoryCache } from "@apollo/client"
 import { Toaster } from "@/components/ui/toaster"
 import { SignerProvider } from "@/contexts/SignerContext"
+import { SubProvider } from "./SubProvider"
 
 const Providers = ({ children }: PropsWithChildren) => {
   const [queryClient] = useState(() => new QueryClient())
@@ -20,6 +21,9 @@ const Providers = ({ children }: PropsWithChildren) => {
           true: wsLink({
             client: createWSClient({
               url: `${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL}/api/trpc`,
+              onClose(cause) {
+                console.log("connection closed? ", cause)
+              },
             }),
           }),
           false: httpBatchLink({
@@ -50,7 +54,9 @@ const Providers = ({ children }: PropsWithChildren) => {
         <QueryClientProvider client={queryClient}>
           <Toaster />
           <ApolloProvider client={apolloClient}>
-            <SignerProvider>{children}</SignerProvider>
+            <SignerProvider>
+              <SubProvider>{children}</SubProvider>
+            </SignerProvider>
           </ApolloProvider>
         </QueryClientProvider>
       </ClerkProvider>

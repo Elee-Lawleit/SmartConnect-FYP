@@ -2,22 +2,24 @@ import express from "express"
 import { nextApp, nextHandler } from "./next-utils"
 import * as trpcExpress from "@trpc/server/adapters/express"
 import { appRouter } from "./trpc"
-import { inferAsyncReturnType } from "@trpc/server"
-import { PrismaClient } from "@prisma/client"
 import { applyWSSHandler } from "@trpc/server/adapters/ws"
-import ws from "ws"
 import { NodeHTTPCreateContextFnOptions } from "@trpc/server/adapters/node-http"
 import { IncomingMessage } from "http"
+import { inferAsyncReturnType } from "@trpc/server"
 import { EventEmitter } from "events"
+import { PrismaClient } from "@prisma/client"
+import ws from "ws"
+
 
 const app = express()
-const prisma = new PrismaClient()
-const ee = new EventEmitter()
 
 const PORT = Number(process.env.PORT) || 3000
 
+const prisma = new PrismaClient()
+const ee = new EventEmitter()
+
 //goes into createExpressMiddleware for trpc
-const createContext = async (
+export const createContext = async (
   options:
     | trpcExpress.CreateExpressContextOptions
     | NodeHTTPCreateContextFnOptions<IncomingMessage, ws>
@@ -37,7 +39,7 @@ const start = () => {
     "/api/trpc",
     trpcExpress.createExpressMiddleware({
       router: appRouter,
-      createContext,
+      createContext: createContext,
     })
   )
 
@@ -49,32 +51,45 @@ const start = () => {
       console.log(`Server started on port ${PORT}`)
     })
 
-    const wss = new ws.Server({ server })
+    if (process.env.NODE_ENV === "production") {
+      const wss = new ws.Server({ server })
+      const handler = applyWSSHandler({
+        wss,
+        router: appRouter,
+        createContext,
+      })
 
-    const handler = applyWSSHandler({
-      wss,
-      router: appRouter,
-      createContext,
-    })
+      process.on("SIGTERM", () => {
+        console.log("SIGTERM")
+        handler.broadcastReconnectNotification()
+        wss.close()
+      })
+    }
+    else{
+      const wss = new ws.Server({
+        port: 3001,
+      })
 
-    //about WEB SOCKETS
-    // it's not working because of some weird thing inside nextjs' base-server.js file
-    // change line number 460 in next/base-server.js provided below
-    // const origSetHeader = _res.setHeader.bind(_res); --> from this
-    // const origSetHeader = _res && typeof _res.setHeader === "function" ? _res.setHeader.bind(_res) : null --> to this
+      const handler = applyWSSHandler({
+        wss,
+        router: appRouter,
+        createContext,
+      })
 
-    wss.on("connection", () => {
-      console.log("+++ Connection ", wss.clients.size)
-    })
-    wss.on("close", () => {
-      console.log("--- Connection ", wss.clients.size)
-    })
+      wss.on("connection", (ws) => {
+        console.log(`➕➕ Connection (${wss.clients.size})`)
+        ws.once("close", () => {
+          console.log(`➖➖ Connection (${wss.clients.size})`)
+        })
+      })
+      console.log("✅ WebSocket Server listening on ws://localhost:3001")
 
-    process.on("SIGTERM", () => {
-      console.log("SIGTERM")
-      handler.broadcastReconnectNotification()
-      wss.close()
-    })
+      process.on("SIGTERM", () => {
+        console.log("SIGTERM")
+        handler.broadcastReconnectNotification()
+        wss.close()
+      })
+    }
   })
 }
 
