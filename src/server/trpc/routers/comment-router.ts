@@ -8,7 +8,9 @@ import {
   ReplyComments,
 } from "../../../../prisma/types"
 
-export const addUserDataToComments = async (comments: Comment[]) => {
+export const addUserDataToComments = async (
+  comments: ParentCommentsWithReplyCount[] | ReplyComments[]
+) => {
   const userIds = comments.map((comment) => comment.userId)
   const usersList = await clerk.users.getUserList({
     userId: userIds, //"userId" is an array btw, really should put an "S" at the end there, would be a lot clearer
@@ -30,7 +32,7 @@ export const addUserDataToComments = async (comments: Comment[]) => {
 }
 
 export const commentRouter = router({
-  fetchAllParentComments: publicProcedure
+  fetchAllParentComments: privateProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(100).nullish(),
@@ -84,7 +86,19 @@ export const commentRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
       }
 
-      const comments = await addUserDataToComments(rawComments)
+      let comments = await addUserDataToComments(rawComments)
+
+      comments = comments.map((comment) => {
+        if (!ctx.user)
+          return {
+            ...comment,
+            comment: { ...comment.comment, isLikedByUser: false },
+          }
+        const isLikedByUser = comment.comment.commentLikes.some(
+          (like) => like.userId === ctx.user?.id
+        )
+        return { ...comment, comment: { ...comment.comment, isLikedByUser } }
+      })
 
       let nextCursor: typeof cursor | undefined = undefined
 
@@ -96,7 +110,7 @@ export const commentRouter = router({
 
       return { success: true, comments, nextCursor }
     }),
-  fetchAllReplies: publicProcedure
+  fetchAllReplies: privateProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(100).nullish(),
@@ -143,7 +157,22 @@ export const commentRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
       }
 
-      const comments = await addUserDataToComments(rawComments)
+      let comments = await addUserDataToComments(rawComments)
+
+      comments = comments.map((comment) => {
+        if (!ctx.user)
+          return {
+            ...comment,
+            comment: { ...comment.comment, isLikedByUser: false },
+          }
+        const isLikedByUser = comment.comment.commentLikes.some(
+          (like) => like.userId === ctx.user?.id
+        )
+        return {
+          ...comment,
+          comment: { ...comment.comment, isLikedByUser },
+        }
+      })
 
       let nextCursor: typeof cursor | undefined = undefined
 

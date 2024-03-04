@@ -6,22 +6,19 @@ import { Button } from "./ui/button"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import {
-  Loader2,
-  MessageSquareReply,
-  Send,
-  ThumbsUp,
-  ThumbsUpIcon,
-} from "lucide-react"
+import { Loader2, MessageSquareReply, Send, ThumbsUpIcon } from "lucide-react"
 import { trpc } from "@/server/trpc/client"
 import { toast } from "./ui/use-toast"
 import { useUser } from "@clerk/nextjs"
+import CommentReply from "./CommentReply"
 
 interface CommentProps {
   comment: any
   postId: string
   replyCount: number
   commentLikes: any
+  likeCount: number
+  isLikedByUser: boolean
 }
 
 const replySchema = z.object({
@@ -35,11 +32,19 @@ const Comment = ({
   postId,
   replyCount,
   commentLikes,
+  likeCount,
+  isLikedByUser,
 }: CommentProps) => {
   const { user } = useUser()
   const utils = trpc.useUtils()
   const [openReply, setOpenReply] = useState<boolean>(false)
   const [showReplies, setShowReplies] = useState<boolean>(false)
+
+  const [optimisticLikeCount, setOptimisticLikeCount] =
+    useState<number>(likeCount)
+  const [optimisticLikeStatus, setOptimisticLikeStatus] =
+    useState<boolean>(isLikedByUser)
+  const [invalidatingQuery, setInvalidatingQuery] = useState<boolean>(false)
 
   const { mutate, isLoading: postingReply } =
     trpc.commentRouter.createComment.useMutation()
@@ -85,23 +90,26 @@ const Comment = ({
   }
 
   const updateLikeStatus = () => {
-    if (
-      commentLikes &&
-      commentLikes?.filter(
-        (commentLike: any) => commentLike.userId === user?.id
-      ).length !== 0
-    ) {
+    setOptimisticLikeStatus((prev) => !prev)
+    setInvalidatingQuery((prev) => !prev)
+    if (isLikedByUser) {
+      setOptimisticLikeCount((prev) => prev - 1)
       unlikeComment(
         { commentId: comment.comment.id },
         {
           onSuccess: () => {
-            utils.commentRouter.fetchAllParentComments.invalidate()
+            utils.commentRouter.fetchAllParentComments
+              .invalidate()
+              .then(() => setInvalidatingQuery((prev) => !prev))
             toast({
               title: "Success",
               description: "Comment unliked successfully",
             })
           },
           onError: () => {
+            setOptimisticLikeCount((prev) => prev + 1)
+            setOptimisticLikeStatus((prev) => !prev)
+            setInvalidatingQuery((prev) => !prev)
             toast({
               variant: "destructive",
               title: "Couldn't unlike comment.",
@@ -111,17 +119,23 @@ const Comment = ({
         }
       )
     } else {
+      setOptimisticLikeCount((prev) => prev + 1)
       likeComment(
         { commentId: comment.comment.id },
         {
           onSuccess: () => {
-            utils.commentRouter.fetchAllParentComments.invalidate()
+            utils.commentRouter.fetchAllParentComments
+              .invalidate()
+              .then(() => setInvalidatingQuery((prev) => !prev))
             toast({
               title: "Success",
               description: "Comment liked successfully",
             })
           },
           onError: () => {
+            setOptimisticLikeCount((prev) => prev - 1)
+            setOptimisticLikeStatus((prev) => !prev)
+            setInvalidatingQuery((prev) => !prev)
             toast({
               variant: "destructive",
               title: "Couldn't like comment.",
@@ -181,22 +195,17 @@ const Comment = ({
             </Button>
             <div className="flex gap-2 items-start">
               <Button
+                disabled={likingComment || unLikingComment || invalidatingQuery}
                 onClick={() => updateLikeStatus()}
                 variant="link"
                 className="text-xs p-0 bg-none h-3 w-fit"
               >
                 <ThumbsUpIcon
                   className="h-4 w-4 "
-                  fill={
-                    commentLikes?.filter(
-                      (postLike: any) => postLike.userId === user?.id
-                    ).length !== 0
-                      ? "#4267b2"
-                      : "none"
-                  }
+                  fill={optimisticLikeStatus ? "#4267b2" : "none"}
                 />
               </Button>
-              <span className="text-xs">{comment.comment.likes}</span>
+              <span className="text-xs">{optimisticLikeCount}</span>
             </div>
           </div>
         </div>
@@ -244,31 +253,17 @@ const Comment = ({
           response.comments.map((reply) => {
             console.log("Reply: ", reply)
             return (
-              <div
-                className="flex items-start space-x-2 ml-5 pl-3 mt-3"
+              <CommentReply
                 key={reply.comment.id}
-              >
-                <img
-                  src={reply.user.imageUrl}
-                  alt="User Avatar"
-                  className="w-6 h-6 rounded-full"
-                />
-                <div className="flex flex-col justify-start">
-                  <div className="flex gap-1 items-center justify-start">
-                    <p className="text-gray-800 font-semibold">
-                      {reply.user?.username ??
-                        reply?.user?.emailAddresses[0].emailAddress.split(
-                          "@"
-                        )[0]}
-                    </p>
-                    <span className="h-fit text-xs">.</span>
-                    <p className="text-xs h-fit">
-                      {formatRelativeTime(reply.comment.createdAt)}
-                    </p>
-                  </div>
-                  <p className="text-gray-500 text-sm">{reply.comment.text}</p>
-                </div>
-              </div>
+                id={reply.comment.id}
+                likeCount={reply.comment.likes}
+                isLikedByUser={reply.comment.isLikedByUser ?? false}
+                userImageUrl={reply.user.imageUrl}
+                userDisplayName={reply.user.username || ""}
+                userEmailAddress={reply.user.emailAddresses[0].emailAddress || ""}
+                createdAt={reply.comment.createdAt}
+                text={reply.comment.text}
+              />
             )
           })
         )}

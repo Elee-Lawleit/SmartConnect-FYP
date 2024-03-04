@@ -7,12 +7,16 @@ export type PostWithRelations = Prisma.PostGetPayload<{
 }
 
 export type ParentCommentsWithReplyCount = Prisma.CommentGetPayload<{
-  include: {_count: {select: {replies: true}}, commentLikes: true}
-}>
+  include: { _count: { select: { replies: true } }; commentLikes: true }
+}> & {
+  isLikedByUser?: boolean
+}
 
 export type ReplyComments = Prisma.CommentGetPayload<{
-  include: {commentLikes: true}
-}>
+  include: { commentLikes: true }
+}> & {
+  isLikedByUser?: boolean
+}
 
 export type User = {
   id: string

@@ -1,13 +1,6 @@
 "use client"
 import { cn, formatRelativeTime } from "@/lib/utils"
-import {
-  Bookmark,
-  Heart,
-  Repeat,
-  Trash,
-  Trash2,
-  TwitterIcon,
-} from "lucide-react"
+import { Bookmark, Heart, Repeat, Trash2 } from "lucide-react"
 import React, { useEffect, useRef, useState } from "react"
 import {
   Carousel,
@@ -80,7 +73,8 @@ const Post = ({
   const [api, setApi] = React.useState<CarouselApi>()
   const [mediaLoaded, setMediaLoaded] = useState<boolean>(false)
   const [optimisticLikeCount, setOptimisticLikeCount] = useState<number>(likes)
-  const [optimisticLikeStatus, setOptimisticLikeStatus] = useState<boolean>(isLikedByUser)
+  const [optimisticLikeStatus, setOptimisticLikeStatus] =
+    useState<boolean>(isLikedByUser)
   const [invalidatingQuery, setInvalidatingQuery] = useState<boolean>(false)
   const utils = trpc.useUtils()
 
@@ -127,12 +121,9 @@ const Post = ({
   }, [api, mediaLoaded])
 
   const updateLikeStatus = () => {
+    setInvalidatingQuery((prev)=>!prev)
     setOptimisticLikeStatus((prev) => !prev)
-    if (
-      postLikes &&
-      postLikes.filter((postLike) => postLike.userId === user?.id)
-        .length !== 0
-    ) {
+    if (isLikedByUser) {
       setOptimisticLikeCount((prev) => prev - 1)
       unlikePost(
         { postId: id },
@@ -140,6 +131,7 @@ const Post = ({
           onError: () => {
             setOptimisticLikeCount((prev) => prev + 1)
             setOptimisticLikeStatus((prev) => !prev)
+            setInvalidatingQuery((prev)=>!prev)
             toast({
               variant: "destructive",
               title: "Couldn't unlike post.",
@@ -149,7 +141,7 @@ const Post = ({
           onSuccess: async () => {
             utils.postRouter.fetchAllPosts
               .invalidate()
-              .then(() => setInvalidatingQuery(false))
+              .then(() => setInvalidatingQuery((prev) => !prev))
             toast({
               title: "Success",
               description: "Post unliked successfully",
@@ -165,6 +157,7 @@ const Post = ({
           onError: () => {
             setOptimisticLikeCount((prev) => prev - 1)
             setOptimisticLikeStatus((prev) => !prev)
+            setInvalidatingQuery((prev) => !prev)
             toast({
               variant: "destructive",
               title: "Couldn't like post.",
@@ -174,7 +167,7 @@ const Post = ({
           onSuccess: async () => {
             utils.postRouter.fetchAllPosts
               .invalidate()
-              .then(() => setInvalidatingQuery(false))
+              .then(() => setInvalidatingQuery((prev) => !prev))
             toast({
               title: "Success",
               description: "Post liked successfully",
@@ -191,7 +184,10 @@ const Post = ({
         {/* <!-- User Info with Three-Dot Menu --> */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <Link href={`/profile/${userId}`} className="hover:no-underline relative">
+            <Link
+              href={`/profile/${userId}`}
+              className="hover:no-underline relative"
+            >
               <img
                 src={userImageUrl}
                 alt="User Avatar"
@@ -200,7 +196,10 @@ const Post = ({
               <div className="absolute bg-transparent hover:bg-gray-200 inset-0 rounded-full opacity-20" />
             </Link>
             <div>
-              <Link href={`/profile/${userId}`} className="hover:underline underline-offset-2">
+              <Link
+                href={`/profile/${userId}`}
+                className="hover:underline underline-offset-2"
+              >
                 <p className="text-gray-800 font-semibold">{userDisplayName}</p>
               </Link>
               <p className="text-gray-500 text-sm hover:underline-none">
