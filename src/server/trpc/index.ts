@@ -1,13 +1,15 @@
 import { commentRouter } from "./routers/comment-router"
+import { groupRouter } from "./routers/group-router"
 import { postRouter } from "./routers/post-router"
 import { profileRouter } from "./routers/profile-router"
 import { router } from "./trpc"
 
 //pass sub routes into this main router
 export const appRouter = router({
-  postRouter: postRouter,
-  commentRouter: commentRouter,
-  profileRouter: profileRouter
+  postRouter,
+  commentRouter,
+  profileRouter,
+  groupRouter
 })
 
 //to get typesafety on front end

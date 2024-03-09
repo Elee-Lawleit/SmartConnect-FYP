@@ -7,7 +7,7 @@ import { PostWithRelations } from "../../../../prisma/types"
 import { filterUserForClient } from "../../../server/helpers/filterUserForClient"
 import { observable } from "@trpc/server/observable"
 
-const addUserDataToPosts = async (posts: PostWithRelations[]) => {
+export const addUserDataToPosts = async (posts: PostWithRelations[]) => {
   const userIds = posts.map((post) => post.userId)
   const usersList = (
     await clerk.users.getUserList({
@@ -270,6 +270,10 @@ export const postRouter = router({
       }
 
       ctx.ee.emit("onPostCreated", post)
+
+
+      //for now I am just gonna add the notification logic here, which can later be
+      //changed to be handled by a background worker process
 
       return { success: true, post }
     }),

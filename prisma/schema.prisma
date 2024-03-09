@@ -19,26 +19,26 @@ model UserCoverImages {
   @@map("user_cover_images")
 }
 
-enum FriendRequestStatus{
+enum FriendRequestStatus {
   PENDING
   ACCEPTED
   DENIED
+
   @@map("friend_request_status")
 }
 
 //if a friend req is denied, it might not be needed to kept in the table
 //but this will suffice for now, I presume
 //also, sent and received don't need to be separate tables, one will suffice with the current requirements
-model FriendRequests{
-  senderId    String   @map("user_a_id")
-  receiverId  String   @map("user_b_id")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  status    FriendRequestStatus
+model FriendRequests {
+  senderId   String              @map("user_a_id")
+  receiverId String              @map("user_b_id")
+  createdAt  DateTime            @default(now()) @map("created_at") @db.Timestamptz()
+  status     FriendRequestStatus
 
   @@id([senderId, receiverId])
   @@unique([senderId, receiverId])
   @@map("friend_requests")
-
 }
 
 model Friend {
@@ -57,6 +57,9 @@ model Post {
   likes     Int      @default(0) //still keeping this here for easy quering
   views     Int      @default(0) // will use this when I implement the intersection observer API
   userId    String   @map("user_id")
+  groupId   String?  @map("group_id")
+
+  group Group? @relation(fields: [groupId], references: [id], onUpdate: Cascade, onDelete: Cascade)
 
   comments   Comment[]
   media      Media[]
@@ -173,11 +176,15 @@ enum EventType {
 }
 
 model Group {
-  id          String   @id @default(uuid())
-  name        String
-  description String
-  createdAt   DateTime @default(now()) @db.Timestamptz()
-  adminId     String   @map("admin_id")
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  createdAt     DateTime @default(now()) @db.Timestamptz()
+  adminId       String   @map("admin_id")
+  coverImageUrl String?
+
+  groupUsers GroupUsers[]
+  posts      Post[]
 
   @@map("group")
 }
@@ -185,6 +192,8 @@ model Group {
 model GroupUsers {
   userId  String @map("user_id")
   groupId String @map("group_id")
+
+  group Group @relation(fields: [groupId], references: [id])
 
   @@id([userId, groupId])
   @@map("group_users")
