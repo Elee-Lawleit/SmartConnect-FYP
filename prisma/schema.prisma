@@ -179,9 +179,9 @@ model Group {
   id            String   @id @default(uuid())
   name          String
   description   String
-  createdAt     DateTime @default(now()) @db.Timestamptz()
+  createdAt     DateTime @default(now()) @db.Timestamptz() @map("created_at")
   adminId       String   @map("admin_id")
-  coverImageUrl String?
+  coverImageUrl String?  @map("cover_image_url")
 
   groupUsers GroupUsers[]
   posts      Post[]

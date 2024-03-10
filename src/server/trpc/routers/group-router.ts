@@ -38,13 +38,26 @@ export const groupRouter = router({
     const groups = await ctx.prisma.group.findMany({
       where: {
         groupUsers: {
-          every: {
+          some: {
+            userId: {
+              equals: id,
+            },
+          },
+        },
+      },
+    })
+
+    const notJoined = await ctx.prisma.group.findMany({
+      where: {
+        groupUsers: {
+          none: {
             userId: id,
           },
         },
       },
     })
-    return { success: true, groups }
+
+    return { success: true, groups, notJoined }
   }),
 
   fetchGroupById: privateProcedure
@@ -63,6 +76,26 @@ export const groupRouter = router({
       })
 
       return { success: true, group }
+    }),
+
+  joinGroup: privateProcedure
+    .input(
+      z.object({
+        groupId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { groupId } = input
+
+      const groupUser = await ctx.prisma.groupUsers.create({
+        data: {
+          groupId,
+          userId: ctx.user.id
+        }
+      })
+
+      return { success: true, groupUser }
+
     }),
 
   fetchPosts: privateProcedure
@@ -100,8 +133,8 @@ export const groupRouter = router({
           media: true,
         },
         where: {
-          groupId
-        }
+          groupId,
+        },
       })
 
       let posts = await addUserDataToPosts(rawPosts)
@@ -115,15 +148,14 @@ export const groupRouter = router({
         return { ...post, post: { ...post.post, isLikedByUser } }
       })
 
-     let nextCursor: typeof cursor | undefined = undefined
+      let nextCursor: typeof cursor | undefined = undefined
 
-     //it means there still are posts to retrieve
-     if (posts.length > limit) {
-       const nextItem = posts.pop()
-       nextCursor = nextItem!.post.id
-     }
+      //it means there still are posts to retrieve
+      if (posts.length > limit) {
+        const nextItem = posts.pop()
+        nextCursor = nextItem!.post.id
+      }
 
-     return { success: true, posts, nextCursor }
-
+      return { success: true, posts, nextCursor }
     }),
 })
