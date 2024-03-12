@@ -13,6 +13,8 @@ const page = () => {
     isError,
   } = trpc.groupRouter.joinGroup.useMutation()
 
+  const{mutate: leaveGroup, isLoading: leaving, isError: leavingError} = trpc.groupRouter.leaveGroup.useMutation()
+
   console.log("Data: ", data)
 
   return (
@@ -26,6 +28,26 @@ const page = () => {
           >
             <p>{group.name}</p>
             <p>{group.description}</p>
+            <Button onClick={()=>{
+              leaveGroup(
+                { groupId: group.id },
+                {
+                  onError: () =>
+                    toast({
+                      variant: "destructive",
+                      title: "Error",
+                      description:
+                        "Error leaving group, please try again later",
+                    }),
+                  onSuccess: () =>
+                    toast({
+                      variant: "default",
+                      title: "Success",
+                      description: "Group left successfully",
+                    }),
+                }
+              )
+            }}>Leave group</Button>
           </Link>
         )
       })}

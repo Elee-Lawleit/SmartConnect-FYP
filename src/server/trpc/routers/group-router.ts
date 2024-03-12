@@ -2,6 +2,7 @@ import { z } from "zod"
 import { privateProcedure, router } from "../trpc"
 import { PostWithRelations } from "../../../../prisma/types"
 import { addUserDataToPosts } from "./post-router"
+import { TRPCError } from "@trpc/server"
 
 export const groupRouter = router({
   createGroup: privateProcedure
@@ -14,18 +15,24 @@ export const groupRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { name, description } = input
 
-      const group = await ctx.prisma.group.create({
-        data: {
-          name,
-          description,
-          adminId: ctx.user.id,
-          groupUsers: {
-            create: {
-              userId: ctx.user.id,
+      let group
+      try {
+        group = await ctx.prisma.group.create({
+          data: {
+            name,
+            description,
+            adminId: ctx.user.id,
+            groupUsers: {
+              create: {
+                userId: ctx.user.id,
+              },
             },
           },
-        },
-      })
+        })
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
 
       return { success: true, group }
     }),
@@ -35,27 +42,33 @@ export const groupRouter = router({
       user: { id },
     } = ctx
 
-    const groups = await ctx.prisma.group.findMany({
-      where: {
-        groupUsers: {
-          some: {
-            userId: {
-              equals: id,
+    let groups, notJoined
+    try {
+      groups = await ctx.prisma.group.findMany({
+        where: {
+          groupUsers: {
+            some: {
+              userId: {
+                equals: id,
+              },
             },
           },
         },
-      },
-    })
+      })
 
-    const notJoined = await ctx.prisma.group.findMany({
-      where: {
-        groupUsers: {
-          none: {
-            userId: id,
+      notJoined = await ctx.prisma.group.findMany({
+        where: {
+          groupUsers: {
+            none: {
+              userId: id,
+            },
           },
         },
-      },
-    })
+      })
+    } catch (error) {
+      console.log("🔴 Prisma Error: ", error)
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+    }
 
     return { success: true, groups, notJoined }
   }),
@@ -69,11 +82,17 @@ export const groupRouter = router({
     .query(async ({ ctx, input }) => {
       const { groupId } = input
 
-      const group = await ctx.prisma.group.findFirst({
-        where: {
-          id: groupId,
-        },
-      })
+      let group
+      try {
+        group = await ctx.prisma.group.findFirst({
+          where: {
+            id: groupId,
+          },
+        })
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
 
       return { success: true, group }
     }),
@@ -87,15 +106,47 @@ export const groupRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { groupId } = input
 
-      const groupUser = await ctx.prisma.groupUsers.create({
-        data: {
-          groupId,
-          userId: ctx.user.id
-        }
-      })
+      let groupUser
+      try {
+        groupUser = await ctx.prisma.groupUsers.create({
+          data: {
+            groupId,
+            userId: ctx.user.id,
+          },
+        })
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
 
       return { success: true, groupUser }
+    }),
 
+  leaveGroup: privateProcedure
+    .input(
+      z.object({
+        groupId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { groupId } = input
+
+      let deletedRow
+      try {
+        deletedRow = await ctx.prisma.groupUsers.delete({
+          where: {
+            userId_groupId: {
+              userId: ctx.user.id,
+              groupId,
+            },
+          },
+        })
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
+
+      return { success: true, deletedRow }
     }),
 
   fetchPosts: privateProcedure
@@ -111,31 +162,37 @@ export const groupRouter = router({
       const limit = input.limit ?? 50
 
       let rawPosts: PostWithRelations[]
-      rawPosts = await ctx.prisma.post.findMany({
-        take: limit + 1,
-        cursor: cursor ? { id: cursor } : undefined,
-        orderBy: [
-          {
-            createdAt: "desc",
-          },
-          {
-            likes: "desc",
-          },
-        ],
-        include: {
-          _count: {
-            select: {
-              comments: true,
-              postLikes: true,
+
+      try {
+        rawPosts = await ctx.prisma.post.findMany({
+          take: limit + 1,
+          cursor: cursor ? { id: cursor } : undefined,
+          orderBy: [
+            {
+              createdAt: "desc",
             },
+            {
+              likes: "desc",
+            },
+          ],
+          include: {
+            _count: {
+              select: {
+                comments: true,
+                postLikes: true,
+              },
+            },
+            postLikes: true,
+            media: true,
           },
-          postLikes: true,
-          media: true,
-        },
-        where: {
-          groupId,
-        },
-      })
+          where: {
+            groupId,
+          },
+        })
+      } catch (error) {
+        console.log("🔴 Prisma Error: ", error)
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+      }
 
       let posts = await addUserDataToPosts(rawPosts)
 
