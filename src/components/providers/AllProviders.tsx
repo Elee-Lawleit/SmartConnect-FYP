@@ -92,7 +92,7 @@ export default Providers
 //             ])
 //           } catch (error: any) {
 //             if (error.code == "4001")
-//               alert("Wallet disconected. You can connect it anytime!")
+//               alert("Wallet disconnected. You can connect it anytime!")
 //           }
 //         }
 //       }

@@ -40,6 +40,10 @@ const CreatePost = () => {
   const handleCaption = (event: ChangeEvent<HTMLTextAreaElement>) => {
     setCaption(event.target.value)
   }
+  const extractHashtags = (caption:string) => {
+    const regex = /(\#[a-zA-Z0-9_]+)/g
+    return caption.match(regex) || []
+  }
 
   const handleImageUploads = async (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -126,8 +130,10 @@ const CreatePost = () => {
     console.log("Media urls: ", mediaUrls)
 
     //finally insert in database
+
+    const hashTags = extractHashtags(caption)
     mutate(
-      { caption, mediaUrls, fileTypes },
+      { caption, mediaUrls, fileTypes, hashTags },
       {
         onSuccess: () => {
           toast({

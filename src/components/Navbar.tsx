@@ -7,9 +7,11 @@ import { MountainIcon, User } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTrigger } from './ui/sheet'
 import { Button } from './ui/button'
 import Image from 'next/image'
+import useSigner from '@/contexts/SignerContext'
 
 const Navbar = () => {
   const{user} = useUser()
+  const{hasMetamask} = useSigner()
   return (
     <div className="flex flex-col w-full shadow-md">
       <header className="flex h-16 w-full shrink-0 items-center justify-between px-3 md:px-6 bg-white">

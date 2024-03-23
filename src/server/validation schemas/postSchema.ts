@@ -8,6 +8,7 @@ export const postSchema = z
     caption: z.string().max(2000).optional(), //text post
     mediaUrls: z.array(z.string().url()).optional(), //array of the media attached to it
     fileTypes: z.array(z.string()).optional(),
+    hashTags: z.array(z.string()).optional(),
   })
   .refine((data) => {
     if (!data.caption && data.mediaUrls?.length === 0) return false

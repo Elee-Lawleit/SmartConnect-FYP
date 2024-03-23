@@ -12,6 +12,7 @@ type SignerContextType = {
   signer?: JsonRpcSigner
   address?: string
   loading: boolean
+  hasMetamask: boolean
   connectWallet: () => Promise<void>
 }
 
@@ -23,13 +24,22 @@ export const SignerProvider = ({ children }: { children: ReactNode }) => {
   const [signer, setSigner] = useState<JsonRpcSigner>()
   const [address, setAddress] = useState<string>()
   const [loading, setLoading] = useState<boolean>(false)
+  const [hasMetamask, setHasMetamask] = useState(true)
+  const [seenMetamaskNotification, setSeenMetamaskNotification] =
+    useState(false)
 
   useEffect(() => {
-    const web3modal = new Web3Modal()
-    if (web3modal.cachedProvider) {
-      connectWallet()
+    if (!window.ethereum) {
+      setHasMetamask(false)
     }
+
     window.ethereum?.on("accountsChanged", connectWallet)
+
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener("accountsChanged", connectWallet)
+      }
+    }
   }, [])
 
   const connectWallet = async () => {
@@ -50,7 +60,7 @@ export const SignerProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false)
   }
 
-  const contextValue = { signer, address, loading, connectWallet }
+  const contextValue = { signer, address, loading, hasMetamask, connectWallet }
 
   return (
     <SingerContext.Provider value={contextValue}>
