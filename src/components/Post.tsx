@@ -121,7 +121,7 @@ const Post = ({
   }, [api, mediaLoaded])
 
   const updateLikeStatus = () => {
-    setInvalidatingQuery((prev)=>!prev)
+    setInvalidatingQuery((prev) => !prev)
     setOptimisticLikeStatus((prev) => !prev)
     if (isLikedByUser) {
       setOptimisticLikeCount((prev) => prev - 1)
@@ -131,7 +131,7 @@ const Post = ({
           onError: () => {
             setOptimisticLikeCount((prev) => prev + 1)
             setOptimisticLikeStatus((prev) => !prev)
-            setInvalidatingQuery((prev)=>!prev)
+            setInvalidatingQuery((prev) => !prev)
             toast({
               variant: "destructive",
               title: "Couldn't unlike post.",
@@ -178,6 +178,22 @@ const Post = ({
     }
   }
 
+  const parseCaption = (caption: string) => {
+    
+    const regex = /(\#[a-zA-Z0-9_]+)/g
+    return caption
+      .split(regex)
+      .filter(Boolean)
+      .map((segment, index) => {
+        if (segment.match(regex)) {
+          // Using the index as part of the key for simplicity; consider more unique keys for complex scenarios
+          return <strong key={`hashtag-${index}`}>{segment}</strong>
+        } else {
+          // Similarly, ensure the key is unique
+          return <span key={`text-${index}`}>{segment}</span>
+        }
+      })
+  }
   return (
     <div className="bg-gray-100 max-w-full mx-auto w-[512px]">
       <div className="bg-white p-8 rounded-lg shadow-md max-w-lg">
@@ -299,7 +315,7 @@ const Post = ({
         </div>
         {/* <!-- Message --> */}
         <div className="mb-4">
-          <p className="text-gray-800">{caption + " "}</p>
+          <p className="text-gray-800">{parseCaption(caption)}</p>
         </div>
         {media && (
           <div className="mb-4">
