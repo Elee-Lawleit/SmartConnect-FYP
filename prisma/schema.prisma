@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -34,7 +31,7 @@ model FriendRequests {
   senderId   String              @map("user_a_id")
   receiverId String              @map("user_b_id")
   createdAt  DateTime            @default(now()) @map("created_at") @db.Timestamptz()
-  status     FriendRequestStatus
+  status     FriendRequestStatus @default(PENDING)
 
   @@id([senderId, receiverId])
   @@unique([senderId, receiverId])

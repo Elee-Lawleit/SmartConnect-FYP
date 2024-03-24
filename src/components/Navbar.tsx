@@ -64,7 +64,7 @@ const Navbar = () => {
           </NavigationMenuList>
         </NavigationMenu>
         <div className="w-[100px] flex justify-end">
-          <UserButton/>
+          <UserButton afterSignOutUrl='/sign-in'/>
           <div />
         </div>
       </header>

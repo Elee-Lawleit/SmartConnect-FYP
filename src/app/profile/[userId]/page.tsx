@@ -22,13 +22,17 @@ interface PageProps {
 }
 
 const UserProfilePage = ({ params: { userId } }: PageProps) => {
-  const { user } = useUser()  
+  const { user } = useUser()
 
   const coverImageElement = useRef<HTMLInputElement | null>(null)
 
+  const { data: userFromBackend } = trpc.profileRouter.fetchUserInfo.useQuery({
+    userId,
+  })
 
-  const{data: userFromBackend} = trpc.profileRouter.fetchUserInfo.useQuery({userId})
-  console.log("data: ", userFromBackend)
+  const { data: friends } = trpc.profileRouter.fetchFriends.useQuery({ userId })
+
+  console.log("friends: ", friends)
 
   const {
     data: coverImageResponse,
@@ -55,6 +59,13 @@ const UserProfilePage = ({ params: { userId } }: PageProps) => {
       enabled: userId ? true : false,
     }
   )
+
+  const {
+    mutate: sendFriendRequest,
+    isLoading: sendingRequest,
+    isError: errorSendingRequest,
+  } = trpc.profileRouter.sendFriendRequest.useMutation()
+
   const { ownedNfts } = useNFTMarketplace()
 
   const { ref, inView, entry } = useInView()
@@ -200,6 +211,20 @@ const UserProfilePage = ({ params: { userId } }: PageProps) => {
                 onChange={handleCoverImageUpload}
               />
             </div>
+          )}
+          {userId !== user.id &&
+          friends?.friends.some(
+            (friend) => friend.friendId === user.id || friend.userId === user.id
+          ) ? (
+            <Button>Unfriend</Button>
+          ) : (
+            <Button
+              onClick={() => {
+                sendFriendRequest({ receiverId: userId })
+              }}
+            >
+              {sendingRequest ? "sending..." : "Send Friend Request"}
+            </Button>
           )}
           <div className="flex items-center gap-6 justify-center">
             <img

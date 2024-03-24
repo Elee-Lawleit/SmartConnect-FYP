@@ -50,6 +50,38 @@ export const profileRouter = router({
 
       return { success: true, coverImage }
     }),
+
+  fetchFriends: privateProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input: { userId } }) => {
+      const friends = await ctx.prisma.friend.findMany({
+        where: {
+          OR: [{ userId }, { friendId: userId }],
+        },
+      })
+
+      return { success: true, friends }
+    }),
+
+  sendFriendRequest: privateProcedure
+    .input(
+      z.object({
+        receiverId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input: { receiverId } }) => {
+      await ctx.prisma.friendRequests.create({
+        data: {
+          senderId: ctx.user.id,
+          receiverId: receiverId,
+        },
+      })
+    }),
+
   updateCoverImage: privateProcedure
     .input(
       z.object({
