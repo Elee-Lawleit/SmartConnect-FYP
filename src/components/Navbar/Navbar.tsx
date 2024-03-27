@@ -110,10 +110,10 @@ function Navbar() {
         </li>
 
         <li>
-          <Link href="/profile">
+          <Link href="/ProfilePage">
             <div
               className={`${linkClass} ${
-                isActive("/profile") ? activeLinkClass : ""
+                isActive("/ProfilePage") ? activeLinkClass : ""
               }`}
             >
               <User />
