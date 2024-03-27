@@ -1,15 +1,15 @@
 import React from "react"
 import Layoutpage from "@/components/Navbar/Layout"
-function NFTpage() {
+function Events() {
   return (
     <Layoutpage>
-      <section id="NFTMarketplace">
+      <section id="Explore">
         <div className=" p-8 bg-white rounded-lg shadow-sm border border-gray-200 pb-52 md:pb-80 w-90 md:ml-60 tb:ml-40 tb:mr-10">
           <div className="bg-whitep-4">
             <div className=" h-32 rounded-md mb-4"></div>
             <div className="text-center mt-4">
               <p className="text-sm text-gray-700 mt-2">
-                Start Exploring NFTs..........
+                Create new Event..........
               </p>
             </div>
           </div>
@@ -19,4 +19,5 @@ function NFTpage() {
     </Layoutpage>
   )
 }
-export default NFTpage
+
+export default Events

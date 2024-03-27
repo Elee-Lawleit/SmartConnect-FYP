@@ -10,7 +10,7 @@ function Home() {
             <div className="h-24 pl-3 pt-2 pb-3 rounded-md mb-4 border border-gray-200">
               <div className="w-16 h-16 bg-white rounded-full overflow-hidden">
                 <img
-                  src="/Images/landing-image.pnga"
+                  src="/Images/landing-image.png"
                   alt="Profile"
                   className="w-full h-full object-cover "
                 />
